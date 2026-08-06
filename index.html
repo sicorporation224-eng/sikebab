@@ -64,6 +64,26 @@
     margin-top: 4px;
     letter-spacing: 1px;
   }
+  .sync-badge {
+    position: absolute;
+    top: 20px;
+    right: 22px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10.5px;
+    background: rgba(255,255,255,0.08);
+    color: #D8CBBB;
+    padding: 5px 11px 5px 9px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .sync-badge::before { content: '●'; font-size: 9px; }
+  .sync-badge.ok::before { color: #8FBF6B; }
+  .sync-badge.busy::before { color: var(--mustard); animation: pulseDot 1s infinite; }
+  .sync-badge.err::before { color: var(--paprika); }
+  @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
   .tabs { display: flex; gap: 6px; margin-top: 18px; }
   .tab-btn {
     font-family: 'Anton', sans-serif;
@@ -218,6 +238,7 @@
 
 <div class="app-root">
   <div class="header">
+    <div class="sync-badge busy" id="syncBadge">Memuat...</div>
     <div class="brand-row">
       <span class="flame">🔥</span>
       <div>
@@ -320,6 +341,11 @@
 </div>
 
 <script>
+  // =========================================================
+  // KONFIGURASI — wajib diisi setelah deploy Apps Script
+  // =========================================================
+  const WEB_APP_URL = "TEMPEL_URL_WEB_APP_DISINI";
+
   // ---------- Data ----------
   const VARIAN_LIST = [
     { key: "Original Manis", color: "#D9A22B" },
@@ -344,6 +370,74 @@
     return d.innerHTML;
   }
 
+  // ---------- Sinkronisasi Google Sheet ----------
+  function setSync(state, text) {
+    const el = document.getElementById('syncBadge');
+    el.className = 'sync-badge ' + state;
+    el.textContent = text;
+  }
+
+  function isConfigured() {
+    return WEB_APP_URL && WEB_APP_URL.indexOf('http') === 0;
+  }
+
+  async function loadAllData() {
+    if (!isConfigured()) {
+      setSync('err', 'URL belum diatur');
+      return;
+    }
+    setSync('busy', 'Memuat...');
+    try {
+      const res = await fetch(WEB_APP_URL, { method: 'GET' });
+      const data = await res.json();
+
+      belanjaItems = (data.belanja || []).map(r => ({
+        id: r.ID,
+        nama: r['Nama Bahan'],
+        harga: Number(r.Harga) || 0,
+        jumlah: Number(r.Jumlah) || 0,
+      }));
+
+      penjualanRows = (data.penjualan || []).map(r => ({
+        id: r.ID,
+        orderId: r.OrderID,
+        nama: r['Nama Pembeli'],
+        varian: r['Varian Rasa'],
+        jumlah: Number(r.Jumlah) || 0,
+      }));
+
+      VARIAN_LIST.forEach(v => {
+        stok[v.key] = (data.stok && Number(data.stok[v.key])) || 0;
+      });
+
+      renderBelanja();
+      renderStok();
+      renderPenjualan();
+      renderDraftItems();
+      setSync('ok', 'Tersimpan di Sheet');
+    } catch (err) {
+      console.error(err);
+      setSync('err', 'Gagal memuat');
+    }
+  }
+
+  async function postAction(action, payload) {
+    setSync('busy', 'Menyimpan...');
+    try {
+      const res = await fetch(WEB_APP_URL, {
+        method: 'POST',
+        // text/plain dipakai agar tidak memicu CORS preflight di Apps Script
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action, ...payload }),
+      });
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      setSync('err', 'Gagal menyimpan');
+      return { success: false, error: 'Tidak bisa menghubungi Google Sheet.' };
+    }
+  }
+
   // ---------- Tabs ----------
   function switchTab(tab) {
     document.getElementById('panelBelanja').classList.toggle('active', tab === 'belanja');
@@ -353,22 +447,28 @@
   }
 
   // ---------- Belanja ----------
-  function tambahBahan() {
-    const nama = document.getElementById('inpNamaBahan').value.trim();
-    const harga = Number(document.getElementById('inpHarga').value);
-    const jumlah = Number(document.getElementById('inpJumlahBahan').value);
+  async function tambahBahan() {
+    const namaEl = document.getElementById('inpNamaBahan');
+    const hargaEl = document.getElementById('inpHarga');
+    const jumlahEl = document.getElementById('inpJumlahBahan');
+    const nama = namaEl.value.trim();
+    const harga = Number(hargaEl.value);
+    const jumlah = Number(jumlahEl.value);
     if (!nama || !harga || !jumlah) return;
 
-    belanjaItems.push({ id: uid(), nama, harga, jumlah });
-    document.getElementById('inpNamaBahan').value = '';
-    document.getElementById('inpHarga').value = '';
-    document.getElementById('inpJumlahBahan').value = '';
-    renderBelanja();
+    const result = await postAction('addBelanja', { data: { nama, harga, jumlah } });
+    if (!result.success) { alert(result.error || 'Gagal menambah bahan.'); setSync('err','Gagal'); return; }
+
+    namaEl.value = '';
+    hargaEl.value = '';
+    jumlahEl.value = '';
+    await loadAllData();
   }
 
-  function hapusBahan(id) {
-    belanjaItems = belanjaItems.filter(it => it.id !== id);
-    renderBelanja();
+  async function hapusBahan(id) {
+    const result = await postAction('deleteBelanja', { id });
+    if (!result.success) { alert(result.error || 'Gagal menghapus bahan.'); }
+    await loadAllData();
   }
 
   function renderBelanja() {
@@ -436,16 +536,17 @@
     }).join('');
   }
 
-  function handleUpdateStok(varianKey) {
+  async function handleUpdateStok(varianKey) {
     const inputId = 'stokInput-' + varianKey.replace(/\s+/g,'');
     const input = document.getElementById(inputId);
     if (input.value === '') return;
     const val = Number(input.value);
     if (isNaN(val) || val < 0) return;
-    stok[varianKey] = val;
+
+    const result = await postAction('setStok', { varian: varianKey, jumlah: val });
+    if (!result.success) { alert(result.error || 'Gagal mengubah stok.'); }
     input.value = '';
-    renderStok();
-    renderDraftItems();
+    await loadAllData();
   }
 
   // ---------- Penjualan ----------
@@ -468,6 +569,7 @@
   function updateDraftVarian(id, value) {
     const d = draftItems.find(d => d.id === id);
     if (d) d.varian = value;
+    renderDraftItems();
   }
 
   function updateDraftJumlah(id, value) {
@@ -491,7 +593,7 @@
     `).join('');
   }
 
-  function simpanPesanan() {
+  async function simpanPesanan() {
     const namaInput = document.getElementById('inpNamaPembeli');
     const nama = namaInput.value.trim();
     if (!nama) return;
@@ -504,7 +606,7 @@
       dimintaPerVarian[d.varian] = (dimintaPerVarian[d.varian] || 0) + Number(d.jumlah);
     });
 
-    // Cek stok cukup sebelum disimpan
+    // Cek stok cukup di sisi tampilan sebelum request dikirim
     for (const varian in dimintaPerVarian) {
       const diminta = dimintaPerVarian[varian];
       const tersedia = stok[varian] || 0;
@@ -514,39 +616,24 @@
       }
     }
 
-    const orderId = uid();
-    valid.forEach(d => {
-      penjualanRows.push({
-        id: uid(),
-        orderId,
-        nama,
-        varian: d.varian,
-        jumlah: Number(d.jumlah),
-      });
-    });
-
-    // Kurangi stok sesuai jumlah yang terjual
-    Object.keys(dimintaPerVarian).forEach(varian => {
-      stok[varian] -= dimintaPerVarian[varian];
-    });
+    const items = valid.map(d => ({ nama, varian: d.varian, jumlah: Number(d.jumlah) }));
+    const result = await postAction('addPenjualan', { items });
+    if (!result.success) {
+      alert(result.error || 'Gagal menyimpan pesanan.');
+      await loadAllData();
+      return;
+    }
 
     namaInput.value = '';
     draftItems = [newDraftRow()];
     renderDraftItems();
-    renderPenjualan();
-    renderStok();
+    await loadAllData();
   }
 
-  function hapusPenjualan(id) {
-    const row = penjualanRows.find(r => r.id === id);
-    if (row) {
-      // Kembalikan stok saat transaksi dihapus
-      stok[row.varian] = (stok[row.varian] || 0) + row.jumlah;
-    }
-    penjualanRows = penjualanRows.filter(r => r.id !== id);
-    renderPenjualan();
-    renderStok();
-    renderDraftItems();
+  async function hapusPenjualan(id) {
+    const result = await postAction('deletePenjualan', { id });
+    if (!result.success) { alert(result.error || 'Gagal menghapus transaksi.'); }
+    await loadAllData();
   }
 
   function renderPenjualan() {
@@ -616,6 +703,7 @@
   renderDraftItems();
   renderBelanja();
   renderPenjualan();
+  loadAllData();
 
   // Enter-to-submit for belanja fields
   ['inpNamaBahan','inpHarga','inpJumlahBahan'].forEach(id => {
