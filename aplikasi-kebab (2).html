@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Warung Kebab Bara — Catatan Belanja & Penjualan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --cream: #FBF3E7;
+    --paper: #FFFDF8;
+    --char: #241712;
+    --char-2: #3A2A20;
+    --paprika: #C2410C;
+    --mustard: #D9A22B;
+    --olive: #5B6B3D;
+    --line: #E4D7C2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: #EFE6D6;
+    color: var(--char);
+    padding: 24px 12px;
+  }
+  .app-root {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--cream);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 18px rgba(36,23,18,0.15);
+  }
+  .header {
+    background: var(--char);
+    color: var(--cream);
+    padding: 22px 24px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::after {
+    content: "";
+    position: absolute;
+    right: -30px; top: -30px;
+    width: 140px; height: 140px;
+    background: radial-gradient(circle, rgba(217,162,43,0.25), transparent 70%);
+  }
+  .brand-row { display: flex; align-items: center; gap: 10px; }
+  .flame { font-size: 22px; }
+  .brand-title {
+    font-family: 'Anton', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--mustard);
+    line-height: 1;
+  }
+  .brand-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #C9BBAA;
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+  .tabs { display: flex; gap: 6px; margin-top: 18px; }
+  .tab-btn {
+    font-family: 'Anton', sans-serif;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 13px;
+    padding: 9px 16px;
+    border-radius: 8px 8px 0 0;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.15s ease;
+  }
+  .tab-btn.active { background: var(--cream); color: var(--char); }
+  .tab-btn:not(.active) { background: rgba(255,255,255,0.06); color: #D8CBBB; }
+  .tab-btn:not(.active):hover { background: rgba(255,255,255,0.12); }
+  .body-pad { padding: 22px 24px 28px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .section-label {
+    font-family: 'Anton', sans-serif;
+    font-size: 15px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--char);
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--paprika); display: inline-block; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 18px; }
+  label.f-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #7A6A58; margin-bottom: 4px; display: block; }
+  input, select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1.5px solid var(--line);
+    background: #fff;
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    color: var(--char);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--paprika); }
+  .btn {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.1s ease, opacity 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--paprika); color: #fff; }
+  .btn-primary:hover { opacity: 0.92; }
+  .btn-outline { background: transparent; border: 1.5px solid var(--line); color: var(--char-2); }
+  .btn-outline:hover { border-color: var(--paprika); color: var(--paprika); }
+  .btn-ghost { background: transparent; color: #A85A3A; padding: 6px 8px; }
+  .btn-ghost:hover { color: var(--paprika); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead th {
+    text-align: left;
+    font-family: 'Space Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #8A7A66;
+    border-bottom: 2px solid var(--char);
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+  tbody td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:hover { background: #FBF6EC; }
+  .num { font-family: 'Space Mono', monospace; }
+  .right { text-align: right; }
+  .center { text-align: center; }
+  .empty-state { text-align: center; padding: 30px 10px; color: #A8977F; font-size: 13px; }
+  .varian-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+  .varian-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .item-row { display: grid; grid-template-columns: 1fr 90px 32px; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .item-row-wrap { margin-bottom: 6px; }
+  .stok-hint { font-size: 11px; color: #8A7A66; font-family: 'Space Mono', monospace; margin: -1px 0 10px 2px; }
+  .stok-hint strong { color: var(--char-2); }
+  .stok-block { padding: 8px 0; border-bottom: 1px dashed rgba(255,255,255,0.15); }
+  .stok-block:last-child { border-bottom: none; padding-bottom: 0; }
+  .stok-block:first-child { padding-top: 0; }
+  .stok-line-top { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; margin-bottom: 7px; }
+  .stok-varian-label { display: flex; align-items: center; gap: 6px; }
+  .stok-count-tag { display: flex; align-items: center; gap: 7px; }
+  .stok-count-num { font-weight: 700; font-size: 14px; }
+  .stok-status { font-family: 'Inter', sans-serif; font-size: 9.5px; padding: 2px 7px; border-radius: 12px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; }
+  .stok-status.ready { background: rgba(91,107,61,0.35); color: #C3DBA2; }
+  .stok-status.habis { background: rgba(194,65,12,0.35); color: #F4B49A; }
+  .stok-edit-row { display: flex; gap: 6px; }
+  .stok-edit-row input {
+    flex: 1;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: var(--cream);
+    border-radius: 6px;
+    padding: 6px 9px;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+  }
+  .stok-edit-row input::placeholder { color: rgba(251,243,231,0.4); }
+  .stok-edit-row input:focus { border-color: var(--mustard); }
+  .stok-edit-row button {
+    background: var(--mustard);
+    color: var(--char);
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .stok-edit-row button:hover { opacity: 0.85; }
+  .receipt-stack { display: flex; flex-direction: column; gap: 18px; }
+  .belanja-form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; }
+  .receipt { background: var(--char); color: var(--cream); border-radius: 12px; padding: 18px 20px; position: relative; font-family: 'Space Mono', monospace; }
+  .receipt::before {
+    content: "";
+    position: absolute;
+    top: -6px; left: 16px; right: 16px; height: 12px;
+    background: radial-gradient(circle at 6px 6px, var(--cream) 5px, transparent 6px) repeat-x;
+    background-size: 16px 12px;
+    background-position: top;
+  }
+  .receipt-title { font-family: 'Anton', sans-serif; font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--mustard); margin-bottom: 10px; }
+  .receipt-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.15); }
+  .receipt-row.total { border-bottom: none; margin-top: 6px; padding-top: 10px; border-top: 1.5px solid rgba(255,255,255,0.35); font-size: 15px; font-weight: 700; color: var(--mustard); }
+  .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 720px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .belanja-form-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-root">
+  <div class="header">
+    <div class="brand-row">
+      <span class="flame">🔥</span>
+      <div>
+        <div class="brand-title">Warung Kebab Bara</div>
+        <div class="brand-sub">CATATAN BELANJA &amp; PENJUALAN</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" id="tabBtnBelanja" onclick="switchTab('belanja')">🛒 Daftar Belanja</button>
+      <button class="tab-btn" id="tabBtnPenjualan" onclick="switchTab('penjualan')">🧾 Daftar Penjualan</button>
+    </div>
+  </div>
+
+  <div class="body-pad">
+
+    <!-- TAB: BELANJA -->
+    <div class="tab-panel active" id="panelBelanja">
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="section-label"><span class="dot"></span>Tambah Bahan</div>
+            <div class="belanja-form-grid">
+              <div>
+                <label class="f-label">Nama Bahan</label>
+                <input type="text" id="inpNamaBahan" placeholder="cth. Daging Sapi" />
+              </div>
+              <div>
+                <label class="f-label">Harga</label>
+                <input type="number" id="inpHarga" placeholder="0" min="0" />
+              </div>
+              <div>
+                <label class="f-label">Jumlah</label>
+                <input type="number" id="inpJumlahBahan" placeholder="0" min="0" />
+              </div>
+              <div style="display:flex; align-items:flex-end;">
+                <button class="btn btn-primary" onclick="tambahBahan()">+ Tambah</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-label"><span class="dot"></span>Rincian Belanja</div>
+            <div id="belanjaTableWrap">
+              <div class="empty-state">Belum ada bahan yang dicatat.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="receipt">
+          <div class="receipt-title">Struk Belanja</div>
+          <div class="receipt-row"><span>Jumlah bahan</span><span id="rBahanCount">0 item</span></div>
+          <div class="receipt-row"><span>Total unit dibeli</span><span id="rUnitCount">0</span></div>
+          <div class="receipt-row total"><span>TOTAL BELANJA</span><span id="rGrandTotal">Rp 0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: PENJUALAN -->
+    <div class="tab-panel" id="panelPenjualan">
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="section-label"><span class="dot"></span>Catat Pesanan</div>
+            <div style="margin-bottom:10px;">
+              <label class="f-label">Nama Pembeli</label>
+              <input type="text" id="inpNamaPembeli" placeholder="cth. Andi" />
+            </div>
+            <label class="f-label">Varian &amp; Jumlah</label>
+            <div id="draftItemsWrap"></div>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+              <button class="btn btn-outline" onclick="addDraftRow()">+ Varian Lain</button>
+              <button class="btn btn-primary" onclick="simpanPesanan()">+ Simpan Pesanan</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-label"><span class="dot"></span>Riwayat Penjualan</div>
+            <div id="penjualanTableWrap">
+              <div class="empty-state">Belum ada penjualan yang dicatat.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="receipt-stack">
+          <div class="receipt">
+            <div class="receipt-title">Stok Kebab Saat Ini</div>
+            <div id="stokReceiptWrap"></div>
+          </div>
+
+          <div class="receipt">
+            <div class="receipt-title">Rekap Penjualan</div>
+            <div id="rekapVarianWrap"></div>
+            <div class="receipt-row total"><span>TOTAL KEBAB TERJUAL</span><span id="rTotalKebab">0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ---------- Data ----------
+  const VARIAN_LIST = [
+    { key: "Original Manis", color: "#D9A22B" },
+    { key: "Original Pedas", color: "#C2410C" },
+    { key: "Mozarella Manis", color: "#8A7A3F" },
+    { key: "Mozarella Pedas", color: "#7A2E14" },
+  ];
+
+  let belanjaItems = [];   // {id, nama, harga, jumlah}
+  let penjualanRows = [];  // {id, orderId, nama, varian, jumlah}
+  let draftItems = [];     // {id, varian, jumlah}
+  let stok = {};           // {varianKey: jumlahStokSaatIni}
+  VARIAN_LIST.forEach(v => stok[v.key] = 0);
+
+  function uid() { return Math.random().toString(36).slice(2, 10); }
+  function fmtRp(n) {
+    return "Rp " + Number(n || 0).toLocaleString("id-ID", { maximumFractionDigits: 0 });
+  }
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // ---------- Tabs ----------
+  function switchTab(tab) {
+    document.getElementById('panelBelanja').classList.toggle('active', tab === 'belanja');
+    document.getElementById('panelPenjualan').classList.toggle('active', tab === 'penjualan');
+    document.getElementById('tabBtnBelanja').classList.toggle('active', tab === 'belanja');
+    document.getElementById('tabBtnPenjualan').classList.toggle('active', tab === 'penjualan');
+  }
+
+  // ---------- Belanja ----------
+  function tambahBahan() {
+    const nama = document.getElementById('inpNamaBahan').value.trim();
+    const harga = Number(document.getElementById('inpHarga').value);
+    const jumlah = Number(document.getElementById('inpJumlahBahan').value);
+    if (!nama || !harga || !jumlah) return;
+
+    belanjaItems.push({ id: uid(), nama, harga, jumlah });
+    document.getElementById('inpNamaBahan').value = '';
+    document.getElementById('inpHarga').value = '';
+    document.getElementById('inpJumlahBahan').value = '';
+    renderBelanja();
+  }
+
+  function hapusBahan(id) {
+    belanjaItems = belanjaItems.filter(it => it.id !== id);
+    renderBelanja();
+  }
+
+  function renderBelanja() {
+    const wrap = document.getElementById('belanjaTableWrap');
+    if (belanjaItems.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">Belum ada bahan yang dicatat.</div>';
+    } else {
+      let rowsHtml = belanjaItems.map(it => `
+        <tr>
+          <td>${escapeHtml(it.nama)}</td>
+          <td class="right num">${fmtRp(it.harga)}</td>
+          <td class="right num">${it.jumlah}</td>
+          <td class="right num">${fmtRp(it.harga * it.jumlah)}</td>
+          <td class="center"><button class="btn btn-ghost" onclick="hapusBahan('${it.id}')">🗑</button></td>
+        </tr>
+      `).join('');
+      wrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Nama Bahan</th>
+              <th class="right">Harga</th>
+              <th class="right">Jumlah</th>
+              <th class="right">Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      `;
+    }
+
+    const grandTotal = belanjaItems.reduce((s, it) => s + it.harga * it.jumlah, 0);
+    const unitCount = belanjaItems.reduce((s, it) => s + it.jumlah, 0);
+    document.getElementById('rBahanCount').textContent = belanjaItems.length + ' item';
+    document.getElementById('rUnitCount').textContent = unitCount;
+    document.getElementById('rGrandTotal').textContent = fmtRp(grandTotal);
+  }
+
+  // ---------- Stok ----------
+  function renderStok() {
+    const wrap = document.getElementById('stokReceiptWrap');
+    wrap.innerHTML = VARIAN_LIST.map(v => {
+      const count = stok[v.key];
+      const ready = count > 0;
+      const inputId = 'stokInput-' + v.key.replace(/\s+/g,'');
+      return `
+        <div class="stok-block">
+          <div class="stok-line-top">
+            <span class="stok-varian-label">
+              <span class="varian-dot" style="background:${v.color};"></span>
+              ${v.key}
+            </span>
+            <span class="stok-count-tag">
+              <span class="stok-count-num">${count} pcs</span>
+              <span class="stok-status ${ready ? 'ready' : 'habis'}">${ready ? 'Ready' : 'Habis'}</span>
+            </span>
+          </div>
+          <div class="stok-edit-row">
+            <input type="number" min="0" id="${inputId}" placeholder="Set stok baru" />
+            <button onclick="handleUpdateStok('${v.key}')">Update</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function handleUpdateStok(varianKey) {
+    const inputId = 'stokInput-' + varianKey.replace(/\s+/g,'');
+    const input = document.getElementById(inputId);
+    if (input.value === '') return;
+    const val = Number(input.value);
+    if (isNaN(val) || val < 0) return;
+    stok[varianKey] = val;
+    input.value = '';
+    renderStok();
+    renderDraftItems();
+  }
+
+  // ---------- Penjualan ----------
+  function newDraftRow() {
+    return { id: uid(), varian: VARIAN_LIST[0].key, jumlah: '' };
+  }
+
+  function addDraftRow() {
+    draftItems.push(newDraftRow());
+    renderDraftItems();
+  }
+
+  function removeDraftRow(id) {
+    if (draftItems.length > 1) {
+      draftItems = draftItems.filter(d => d.id !== id);
+      renderDraftItems();
+    }
+  }
+
+  function updateDraftVarian(id, value) {
+    const d = draftItems.find(d => d.id === id);
+    if (d) d.varian = value;
+  }
+
+  function updateDraftJumlah(id, value) {
+    const d = draftItems.find(d => d.id === id);
+    if (d) d.jumlah = value;
+  }
+
+  function renderDraftItems() {
+    const wrap = document.getElementById('draftItemsWrap');
+    wrap.innerHTML = draftItems.map(d => `
+      <div class="item-row-wrap">
+        <div class="item-row">
+          <select onchange="updateDraftVarian('${d.id}', this.value)">
+            ${VARIAN_LIST.map(v => `<option value="${v.key}" ${v.key === d.varian ? 'selected' : ''}>${v.key}</option>`).join('')}
+          </select>
+          <input type="number" min="0" placeholder="Jml" value="${d.jumlah}" oninput="updateDraftJumlah('${d.id}', this.value)" />
+          <button class="btn btn-ghost" onclick="removeDraftRow('${d.id}')">🗑</button>
+        </div>
+        <div class="stok-hint">Stok tersedia: <strong>${stok[d.varian] || 0}</strong></div>
+      </div>
+    `).join('');
+  }
+
+  function simpanPesanan() {
+    const namaInput = document.getElementById('inpNamaPembeli');
+    const nama = namaInput.value.trim();
+    if (!nama) return;
+    const valid = draftItems.filter(d => Number(d.jumlah) > 0);
+    if (valid.length === 0) return;
+
+    // Gabungkan jumlah per varian (jaga-jaga jika varian sama dipilih dua kali)
+    const dimintaPerVarian = {};
+    valid.forEach(d => {
+      dimintaPerVarian[d.varian] = (dimintaPerVarian[d.varian] || 0) + Number(d.jumlah);
+    });
+
+    // Cek stok cukup sebelum disimpan
+    for (const varian in dimintaPerVarian) {
+      const diminta = dimintaPerVarian[varian];
+      const tersedia = stok[varian] || 0;
+      if (diminta > tersedia) {
+        alert(`Stok "${varian}" tidak cukup.\nSisa stok: ${tersedia}, diminta: ${diminta}.`);
+        return;
+      }
+    }
+
+    const orderId = uid();
+    valid.forEach(d => {
+      penjualanRows.push({
+        id: uid(),
+        orderId,
+        nama,
+        varian: d.varian,
+        jumlah: Number(d.jumlah),
+      });
+    });
+
+    // Kurangi stok sesuai jumlah yang terjual
+    Object.keys(dimintaPerVarian).forEach(varian => {
+      stok[varian] -= dimintaPerVarian[varian];
+    });
+
+    namaInput.value = '';
+    draftItems = [newDraftRow()];
+    renderDraftItems();
+    renderPenjualan();
+    renderStok();
+  }
+
+  function hapusPenjualan(id) {
+    const row = penjualanRows.find(r => r.id === id);
+    if (row) {
+      // Kembalikan stok saat transaksi dihapus
+      stok[row.varian] = (stok[row.varian] || 0) + row.jumlah;
+    }
+    penjualanRows = penjualanRows.filter(r => r.id !== id);
+    renderPenjualan();
+    renderStok();
+    renderDraftItems();
+  }
+
+  function renderPenjualan() {
+    const wrap = document.getElementById('penjualanTableWrap');
+    if (penjualanRows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">Belum ada penjualan yang dicatat.</div>';
+    } else {
+      let lastOrder = null;
+      let rowsHtml = penjualanRows.map(r => {
+        const showName = r.orderId !== lastOrder;
+        lastOrder = r.orderId;
+        const v = VARIAN_LIST.find(x => x.key === r.varian);
+        return `
+          <tr>
+            <td style="font-weight:${showName ? 700 : 400}; color:${showName ? 'var(--char)' : '#B5A895'};">
+              ${showName ? escapeHtml(r.nama) : '↳'}
+            </td>
+            <td>
+              <span class="varian-chip">
+                <span class="varian-dot" style="background:${v ? v.color : '#999'};"></span>
+                ${r.varian}
+              </span>
+            </td>
+            <td class="right num">${r.jumlah}</td>
+            <td class="center"><button class="btn btn-ghost" onclick="hapusPenjualan('${r.id}')">🗑</button></td>
+          </tr>
+        `;
+      }).join('');
+      wrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Nama Pembeli</th>
+              <th>Varian Rasa</th>
+              <th class="right">Jumlah</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      `;
+    }
+
+    // Rekap
+    const totalPerVarian = {};
+    VARIAN_LIST.forEach(v => totalPerVarian[v.key] = 0);
+    penjualanRows.forEach(r => totalPerVarian[r.varian] += r.jumlah);
+
+    const rekapWrap = document.getElementById('rekapVarianWrap');
+    rekapWrap.innerHTML = VARIAN_LIST.map(v => `
+      <div class="receipt-row">
+        <span style="display:flex; align-items:center; gap:6px;">
+          <span class="varian-dot" style="background:${v.color};"></span>
+          ${v.key}
+        </span>
+        <span>${totalPerVarian[v.key]}</span>
+      </div>
+    `).join('');
+
+    const totalKebab = penjualanRows.reduce((s, r) => s + r.jumlah, 0);
+    document.getElementById('rTotalKebab').textContent = totalKebab;
+  }
+
+  // ---------- Init ----------
+  draftItems = [newDraftRow()];
+  renderStok();
+  renderDraftItems();
+  renderBelanja();
+  renderPenjualan();
+
+  // Enter-to-submit for belanja fields
+  ['inpNamaBahan','inpHarga','inpJumlahBahan'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') tambahBahan();
+    });
+  });
+</script>
+
+</body>
+</html>
