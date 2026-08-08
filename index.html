@@ -37,7 +37,9 @@
     background: var(--char);
     color: var(--cream);
     padding: 22px 24px 18px;
-    position: relative;
+    position: sticky;
+    top: 0;
+    z-index: 40;
     overflow: hidden;
   }
   .header::after {
@@ -214,6 +216,21 @@
   }
   .stok-edit-row button:hover { opacity: 0.85; }
   .receipt-stack { display: flex; flex-direction: column; gap: 18px; }
+  .tanggal-picker-row input[type="date"] {
+    width: 100%;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: var(--cream);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: 'Space Mono', monospace;
+    color-scheme: dark;
+  }
+  .tanggal-picker-row input[type="date"]:focus { border-color: var(--mustard); }
+  .tanggal-picker-row input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.85); opacity: 0.8; cursor: pointer; }
+  .tanggal-hint { font-size: 10.5px; color: #B4A38F; margin-top: 8px; line-height: 1.4; }
+  .tgl-cell { font-family: 'Space Mono', monospace; font-size: 12px; color: #9A8A76; white-space: nowrap; }
   .belanja-form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; }
   .receipt { background: var(--char); color: var(--cream); border-radius: 12px; padding: 18px 20px; position: relative; font-family: 'Space Mono', monospace; }
   .receipt::before {
@@ -228,9 +245,30 @@
   .receipt-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.15); }
   .receipt-row.total { border-bottom: none; margin-top: 6px; padding-top: 10px; border-top: 1.5px solid rgba(255,255,255,0.35); font-size: 15px; font-weight: 700; color: var(--mustard); }
   .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; align-items: start; }
+  .col-frozen {
+    position: sticky;
+    top: 112px;
+    max-height: calc(100vh - 130px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .col-frozen::-webkit-scrollbar { width: 6px; }
+  .col-frozen::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+  .col-scroll { min-width: 0; }
+  .riwayat-card { display: flex; flex-direction: column; }
+  .scroll-panel {
+    max-height: min(620px, calc(100vh - 220px));
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .scroll-panel::-webkit-scrollbar { width: 6px; }
+  .scroll-panel::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+  .scroll-panel thead th { position: sticky; top: 0; background: var(--paper); z-index: 2; }
   @media (max-width: 720px) {
     .grid-2 { grid-template-columns: 1fr; }
     .belanja-form-grid { grid-template-columns: 1fr 1fr; }
+    .col-frozen { position: static; max-height: none; overflow-y: visible; }
+    .scroll-panel { max-height: 420px; }
   }
 </style>
 </head>
@@ -299,7 +337,7 @@
     <!-- TAB: PENJUALAN -->
     <div class="tab-panel" id="panelPenjualan">
       <div class="grid-2">
-        <div>
+        <div class="col-frozen">
           <div class="card">
             <div class="section-label"><span class="dot"></span>Catat Pesanan</div>
             <div style="margin-bottom:10px;">
@@ -314,24 +352,37 @@
             </div>
           </div>
 
-          <div class="card">
-            <div class="section-label"><span class="dot"></span>Riwayat Penjualan</div>
-            <div id="penjualanTableWrap">
-              <div class="empty-state">Belum ada penjualan yang dicatat.</div>
+          <div class="receipt-stack">
+            <div class="receipt">
+              <div class="receipt-title">Tanggal Penjualan</div>
+              <div class="tanggal-picker-row">
+                <input type="date" id="inpTanggalPenjualan" />
+              </div>
+              <div class="tanggal-hint" id="tanggalHint">Pesanan baru & rekap akan tercatat untuk tanggal ini.</div>
+            </div>
+
+            <div class="receipt">
+              <div class="receipt-title">Stok Kebab Saat Ini</div>
+              <div id="stokReceiptWrap"></div>
+            </div>
+
+            <div class="receipt">
+              <div class="receipt-title">Rekap Penjualan</div>
+              <div class="receipt-row"><span>Tanggal</span><span id="rekapTanggalLabel">-</span></div>
+              <div id="rekapVarianWrap"></div>
+              <div class="receipt-row total"><span>TOTAL KEBAB TERJUAL</span><span id="rTotalKebab">0</span></div>
             </div>
           </div>
         </div>
 
-        <div class="receipt-stack">
-          <div class="receipt">
-            <div class="receipt-title">Stok Kebab Saat Ini</div>
-            <div id="stokReceiptWrap"></div>
-          </div>
-
-          <div class="receipt">
-            <div class="receipt-title">Rekap Penjualan</div>
-            <div id="rekapVarianWrap"></div>
-            <div class="receipt-row total"><span>TOTAL KEBAB TERJUAL</span><span id="rTotalKebab">0</span></div>
+        <div class="col-scroll">
+          <div class="card riwayat-card">
+            <div class="section-label"><span class="dot"></span>Riwayat Penjualan</div>
+            <div class="scroll-panel" id="riwayatScrollPanel">
+              <div id="penjualanTableWrap">
+                <div class="empty-state">Belum ada penjualan yang dicatat.</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -355,10 +406,24 @@
   ];
 
   let belanjaItems = [];   // {id, nama, harga, jumlah}
-  let penjualanRows = [];  // {id, orderId, nama, varian, jumlah}
+  let penjualanRows = [];  // {id, orderId, nama, varian, jumlah, tanggal}
   let draftItems = [];     // {id, varian, jumlah}
   let stok = {};           // {varianKey: jumlahStokSaatIni}
   VARIAN_LIST.forEach(v => stok[v.key] = 0);
+
+  function todayISO() {
+    const d = new Date();
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 10);
+  }
+  let tanggalTerpilih = todayISO();
+
+  function fmtTanggal(iso) {
+    if (!iso) return '-';
+    const d = new Date(iso + 'T00:00:00');
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
 
   function uid() { return Math.random().toString(36).slice(2, 10); }
   function fmtRp(n) {
@@ -404,6 +469,7 @@
         nama: r['Nama Pembeli'],
         varian: r['Varian Rasa'],
         jumlah: Number(r.Jumlah) || 0,
+        tanggal: r['Tanggal'] || '',
       }));
 
       VARIAN_LIST.forEach(v => {
@@ -617,7 +683,7 @@
     }
 
     const items = valid.map(d => ({ nama, varian: d.varian, jumlah: Number(d.jumlah) }));
-    const result = await postAction('addPenjualan', { items });
+    const result = await postAction('addPenjualan', { items, tanggal: tanggalTerpilih });
     if (!result.success) {
       alert(result.error || 'Gagal menyimpan pesanan.');
       await loadAllData();
@@ -658,6 +724,7 @@
               </span>
             </td>
             <td class="right num">${r.jumlah}</td>
+            <td class="tgl-cell">${escapeHtml(fmtTanggal(r.tanggal))}</td>
             <td class="center"><button class="btn btn-ghost" onclick="hapusPenjualan('${r.id}')">🗑</button></td>
           </tr>
         `;
@@ -669,6 +736,7 @@
               <th>Nama Pembeli</th>
               <th>Varian Rasa</th>
               <th class="right">Jumlah</th>
+              <th>Tanggal</th>
               <th></th>
             </tr>
           </thead>
@@ -677,10 +745,12 @@
       `;
     }
 
-    // Rekap
+    // Rekap — hanya untuk tanggal yang sedang dipilih
+    const rowsTanggalIni = penjualanRows.filter(r => r.tanggal === tanggalTerpilih);
+
     const totalPerVarian = {};
     VARIAN_LIST.forEach(v => totalPerVarian[v.key] = 0);
-    penjualanRows.forEach(r => totalPerVarian[r.varian] += r.jumlah);
+    rowsTanggalIni.forEach(r => totalPerVarian[r.varian] += r.jumlah);
 
     const rekapWrap = document.getElementById('rekapVarianWrap');
     rekapWrap.innerHTML = VARIAN_LIST.map(v => `
@@ -693,8 +763,9 @@
       </div>
     `).join('');
 
-    const totalKebab = penjualanRows.reduce((s, r) => s + r.jumlah, 0);
+    const totalKebab = rowsTanggalIni.reduce((s, r) => s + r.jumlah, 0);
     document.getElementById('rTotalKebab').textContent = totalKebab;
+    document.getElementById('rekapTanggalLabel').textContent = fmtTanggal(tanggalTerpilih);
   }
 
   // ---------- Init ----------
@@ -704,6 +775,13 @@
   renderBelanja();
   renderPenjualan();
   loadAllData();
+
+  const inpTanggal = document.getElementById('inpTanggalPenjualan');
+  inpTanggal.value = tanggalTerpilih;
+  inpTanggal.addEventListener('change', () => {
+    tanggalTerpilih = inpTanggal.value || todayISO();
+    renderPenjualan();
+  });
 
   // Enter-to-submit for belanja fields
   ['inpNamaBahan','inpHarga','inpJumlahBahan'].forEach(id => {
