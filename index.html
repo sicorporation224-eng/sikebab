@@ -119,6 +119,9 @@
     gap: 8px;
   }
   .section-label .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--paprika); display: inline-block; }
+  .section-label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .section-label-row .section-label { margin-bottom: 0; }
+  .btn-sm { padding: 6px 11px; font-size: 12px; }
   .card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 18px; }
   label.f-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #7A6A58; margin-bottom: 4px; display: block; }
   input, select {
@@ -333,7 +336,7 @@
     <!-- TAB: PENJUALAN -->
     <div class="tab-panel" id="panelPenjualan">
       <div class="grid-2">
-        <div class="col-frozen">
+        <div class="col-scroll">
           <div class="card">
             <div class="section-label"><span class="dot"></span>Catat Pesanan</div>
             <div style="margin-bottom:10px;">
@@ -348,6 +351,20 @@
             </div>
           </div>
 
+          <div class="card riwayat-card">
+            <div class="section-label-row">
+              <div class="section-label"><span class="dot"></span>Riwayat Penjualan</div>
+              <button class="btn btn-outline btn-sm" onclick="unduhExcel()">⬇ Unduh Excel</button>
+            </div>
+            <div class="scroll-panel" id="riwayatScrollPanel">
+              <div id="penjualanTableWrap">
+                <div class="empty-state">Belum ada penjualan yang dicatat.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-frozen">
           <div class="receipt-stack">
             <div class="receipt">
               <div class="receipt-title">Tanggal Penjualan</div>
@@ -370,23 +387,13 @@
             </div>
           </div>
         </div>
-
-        <div class="col-scroll">
-          <div class="card riwayat-card">
-            <div class="section-label"><span class="dot"></span>Riwayat Penjualan</div>
-            <div class="scroll-panel" id="riwayatScrollPanel">
-              <div id="penjualanTableWrap">
-                <div class="empty-state">Belum ada penjualan yang dicatat.</div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   // =========================================================
   // KONFIGURASI — wajib diisi setelah deploy Apps Script
@@ -696,6 +703,54 @@
     const result = await postAction('deletePenjualan', { id });
     if (!result.success) { alert(result.error || 'Gagal menghapus transaksi.'); }
     await loadAllData();
+  }
+
+  // ---------- Unduh Excel ----------
+  function unduhExcel() {
+    if (typeof XLSX === 'undefined') {
+      alert('Modul Excel belum termuat (butuh koneksi internet). Coba muat ulang halaman.');
+      return;
+    }
+    if (penjualanRows.length === 0) {
+      alert('Belum ada data penjualan untuk diunduh.');
+      return;
+    }
+
+    // Sheet 1: Detail Penjualan — tanggal, nama pembeli, varian rasa, jumlah
+    const detailData = penjualanRows.map(r => ({
+      'Tanggal Penjualan': fmtTanggal(r.tanggal),
+      'Nama Pembeli': r.nama,
+      'Varian Rasa': r.varian,
+      'Jumlah': r.jumlah,
+    }));
+
+    // Sheet 2: Rekap kebab terjual per tanggal, untuk semua varian rasa
+    const semuaTanggal = Array.from(new Set(penjualanRows.map(r => r.tanggal))).sort();
+    const rekapData = semuaTanggal.map(tgl => {
+      const row = { 'Tanggal': fmtTanggal(tgl) };
+      let total = 0;
+      VARIAN_LIST.forEach(v => {
+        const jumlahVarian = penjualanRows
+          .filter(r => r.tanggal === tgl && r.varian === v.key)
+          .reduce((s, r) => s + r.jumlah, 0);
+        row[v.key] = jumlahVarian;
+        total += jumlahVarian;
+      });
+      row['Total Kebab Terjual'] = total;
+      return row;
+    });
+
+    const wb = XLSX.utils.book_new();
+    const wsDetail = XLSX.utils.json_to_sheet(detailData);
+    wsDetail['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 18 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, wsDetail, 'Detail Penjualan');
+
+    const wsRekap = XLSX.utils.json_to_sheet(rekapData);
+    wsRekap['!cols'] = [{ wch: 16 }, { wch: 15 }, { wch: 15 }, { wch: 16 }, { wch: 16 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(wb, wsRekap, 'Rekap Per Tanggal');
+
+    const namaFile = 'Penjualan-Kebab-Bara-' + todayISO() + '.xlsx';
+    XLSX.writeFile(wb, namaFile);
   }
 
   function renderPenjualan() {
