@@ -247,6 +247,27 @@
   .receipt-title { font-family: 'Anton', sans-serif; font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--mustard); margin-bottom: 10px; }
   .receipt-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.15); }
   .receipt-row.total { border-bottom: none; margin-top: 6px; padding-top: 10px; border-top: 1.5px solid rgba(255,255,255,0.35); font-size: 15px; font-weight: 700; color: var(--mustard); }
+  .tgl-nav { display: flex; align-items: center; gap: 8px; }
+  .tgl-nav button {
+    background: rgba(255,255,255,0.08);
+    color: var(--mustard);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 5px;
+    width: 22px;
+    height: 22px;
+    line-height: 1;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.15s;
+  }
+  .tgl-nav button:hover { background: rgba(217,162,43,0.25); }
+  .tgl-nav button:active { transform: scale(0.92); }
   .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; align-items: start; }
   .col-frozen {
     position: sticky;
@@ -381,7 +402,14 @@
 
             <div class="receipt">
               <div class="receipt-title">Rekap Penjualan</div>
-              <div class="receipt-row"><span>Tanggal</span><span id="rekapTanggalLabel">-</span></div>
+              <div class="receipt-row">
+                <span>Tanggal</span>
+                <span class="tgl-nav">
+                  <button type="button" onclick="geserTanggal(-1)" aria-label="Tanggal sebelumnya">‹</button>
+                  <span id="rekapTanggalLabel">-</span>
+                  <button type="button" onclick="geserTanggal(1)" aria-label="Tanggal berikutnya">›</button>
+                </span>
+              </div>
               <div id="rekapVarianWrap"></div>
               <div class="receipt-row total"><span>TOTAL KEBAB TERJUAL</span><span id="rTotalKebab">0</span></div>
             </div>
@@ -426,6 +454,21 @@
     const d = new Date(iso + 'T00:00:00');
     if (isNaN(d.getTime())) return String(iso);
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function geserTanggal(delta) {
+    const d = new Date(tanggalTerpilih + 'T00:00:00');
+    if (isNaN(d.getTime())) { tanggalTerpilih = todayISO(); }
+    else {
+      d.setDate(d.getDate() + delta);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      tanggalTerpilih = `${yyyy}-${mm}-${dd}`;
+    }
+    const inpTanggal = document.getElementById('inpTanggalPenjualan');
+    if (inpTanggal) inpTanggal.value = tanggalTerpilih;
+    renderPenjualan();
   }
 
   function uid() { return Math.random().toString(36).slice(2, 10); }
