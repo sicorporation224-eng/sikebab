@@ -166,6 +166,7 @@
   .btn-outline { background: transparent; border: 1.5px solid var(--line); color: var(--char-2); }
   .btn-outline:hover { border-color: var(--paprika); color: var(--paprika); }
   .btn-ghost { background: transparent; color: #A85A3A; padding: 6px 8px; }
+  .aksi-cell { display: flex; gap: 2px; align-items: center; justify-content: center; white-space: nowrap; }
   .btn-ghost:hover { color: var(--paprika); }
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   thead th {
@@ -802,6 +803,97 @@
   }
 
   // ---------- Unduh Excel ----------
+  // ---------- Cetak Struk ----------
+  function cetakStruk(orderId) {
+    const items = penjualanRows.filter(r => r.orderId === orderId);
+    if (items.length === 0) {
+      alert('Data transaksi tidak ditemukan.');
+      return;
+    }
+
+    const nama = items[0].nama;
+    const tanggal = items[0].tanggal;
+    const totalHarga = items.reduce((s, r) => s + r.total, 0);
+    const totalJumlah = items.reduce((s, r) => s + r.jumlah, 0);
+
+    const logoEl = document.querySelector('.brand-logo');
+    const logoSrc = logoEl ? logoEl.src : '';
+
+    const itemsHtml = items.map(r => `
+      <tr>
+        <td>${escapeHtml(r.varian)}</td>
+        <td style="text-align:center;">${r.jumlah}</td>
+        <td style="text-align:right;">${fmtRp(r.harga)}</td>
+        <td style="text-align:right;">${fmtRp(r.total)}</td>
+      </tr>
+    `).join('');
+
+    const receiptHtml = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<title>Struk Pembelian - ${escapeHtml(nama)}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Courier New', Courier, monospace; max-width: 320px; margin: 0 auto; padding: 22px 18px; color: #241712; }
+  .center { text-align: center; }
+  img.logo { width: 68px; height: 68px; border-radius: 50%; object-fit: cover; margin-bottom: 8px; }
+  h1 { font-size: 17px; margin: 4px 0 0; letter-spacing: 0.5px; }
+  .sub { font-size: 10.5px; color: #7A6A58; margin-bottom: 4px; letter-spacing: 0.5px; }
+  hr { border: none; border-top: 1px dashed #B8A98F; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; }
+  th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 1px solid #333; padding-bottom: 5px; color: #555; }
+  td { padding: 5px 0; vertical-align: top; }
+  .info-row { display: flex; justify-content: space-between; font-size: 12px; margin: 3px 0; }
+  .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 14.5px; margin-top: 10px; border-top: 1.5px solid #333; padding-top: 10px; }
+  .footer { text-align: center; font-size: 11px; margin-top: 20px; color: #7A6A58; line-height: 1.5; }
+  @media print {
+    body { padding: 0; max-width: 100%; }
+    @page { margin: 10mm; }
+  }
+</style>
+</head>
+<body>
+  <div class="center">
+    ${logoSrc ? `<img class="logo" src="${logoSrc}" alt="Logo Si.Kebab" />` : ''}
+    <h1>Si.Kebab</h1>
+    <div class="sub">SNACK FROZEN HOMEMADE</div>
+  </div>
+  <hr />
+  <div class="info-row"><span>Tanggal</span><span>${escapeHtml(fmtTanggal(tanggal))}</span></div>
+  <div class="info-row"><span>Nama Pembeli</span><span><strong>${escapeHtml(nama)}</strong></span></div>
+  <hr />
+  <table>
+    <thead>
+      <tr>
+        <th>Varian Rasa</th>
+        <th style="text-align:center;">Jml</th>
+        <th style="text-align:right;">Harga</th>
+        <th style="text-align:right;">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>${itemsHtml}</tbody>
+  </table>
+  <hr />
+  <div class="info-row"><span>Total Kebab</span><span>${totalJumlah} pcs</span></div>
+  <div class="total-row"><span>TOTAL BAYAR</span><span>${fmtRp(totalHarga)}</span></div>
+  <div class="footer">Terima kasih sudah memesan di Si.Kebab! 🧡<br/>Enak, Praktis, &amp; Bikin Nagih!</div>
+  <script>
+    window.onload = function () { window.print(); };
+  <\/script>
+</body>
+</html>`;
+
+    const jendela = window.open('', '_blank', 'width=380,height=680');
+    if (!jendela) {
+      alert('Popup diblokir browser. Izinkan popup untuk mencetak struk, lalu coba lagi.');
+      return;
+    }
+    jendela.document.open();
+    jendela.document.write(receiptHtml);
+    jendela.document.close();
+  }
+
   function unduhExcel() {
     if (typeof XLSX === 'undefined') {
       alert('Modul Excel belum termuat (butuh koneksi internet). Coba muat ulang halaman.');
@@ -878,7 +970,10 @@
             <td class="right num">${r.jumlah}</td>
             <td class="right num">${fmtRp(r.total)}</td>
             <td class="tgl-cell">${escapeHtml(fmtTanggal(r.tanggal))}</td>
-            <td class="center"><button class="btn btn-ghost" onclick="hapusPenjualan('${r.id}')">🗑</button></td>
+            <td class="center aksi-cell">
+              ${showName ? `<button class="btn btn-ghost" onclick="cetakStruk('${r.orderId}')" title="Cetak Struk">🖨</button>` : ''}
+              <button class="btn btn-ghost" onclick="hapusPenjualan('${r.id}')" title="Hapus">🗑</button>
+            </td>
           </tr>
         `;
       }).join('');
