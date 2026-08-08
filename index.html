@@ -182,6 +182,15 @@
   .item-row-wrap { margin-bottom: 6px; }
   .stok-hint { font-size: 11px; color: #8A7A66; font-family: 'Space Mono', monospace; margin: -1px 0 10px 2px; }
   .stok-hint strong { color: var(--char-2); }
+  .harga-note { font-size: 11.5px; color: #8A7A66; margin: -6px 0 14px; padding: 8px 10px; background: #FBF3E7; border: 1px dashed var(--line); border-radius: 8px; }
+  .harga-note strong { color: var(--paprika); }
+  .total-pesanan-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 4px; padding: 10px 12px;
+    background: var(--char); color: var(--cream);
+    border-radius: 8px; font-size: 13px; font-weight: 700;
+  }
+  .total-pesanan-row span:last-child { font-family: 'Space Mono', monospace; color: var(--mustard); font-size: 15px; }
   .stok-block { padding: 8px 0; border-bottom: 1px dashed rgba(255,255,255,0.15); }
   .stok-block:last-child { border-bottom: none; padding-bottom: 0; }
   .stok-block:first-child { padding-top: 0; }
@@ -247,6 +256,7 @@
   .receipt-title { font-family: 'Anton', sans-serif; font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--mustard); margin-bottom: 10px; }
   .receipt-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.15); }
   .receipt-row.total { border-bottom: none; margin-top: 6px; padding-top: 10px; border-top: 1.5px solid rgba(255,255,255,0.35); font-size: 15px; font-weight: 700; color: var(--mustard); }
+  .receipt-row.total + .receipt-row.total { border-top: none; margin-top: 0; padding-top: 2px; }
   .tgl-nav { display: flex; align-items: center; gap: 8px; }
   .tgl-nav button {
     background: rgba(255,255,255,0.08);
@@ -364,8 +374,13 @@
               <label class="f-label">Nama Pembeli</label>
               <input type="text" id="inpNamaPembeli" placeholder="cth. Andi" />
             </div>
+            <div class="harga-note">Harga kebab: <strong>Rp 30.000</strong> / pcs &middot; berlaku untuk semua varian rasa</div>
             <label class="f-label">Varian &amp; Jumlah</label>
             <div id="draftItemsWrap"></div>
+            <div class="total-pesanan-row">
+              <span>Total Pesanan</span>
+              <span id="totalPesananValue">Rp 0</span>
+            </div>
             <div style="display:flex; gap:8px; margin-top:10px;">
               <button class="btn btn-outline" onclick="addDraftRow()">+ Varian Lain</button>
               <button class="btn btn-primary" onclick="simpanPesanan()">+ Simpan Pesanan</button>
@@ -412,6 +427,7 @@
               </div>
               <div id="rekapVarianWrap"></div>
               <div class="receipt-row total"><span>TOTAL KEBAB TERJUAL</span><span id="rTotalKebab">0</span></div>
+              <div class="receipt-row total"><span>TOTAL PENDAPATAN</span><span id="rTotalPendapatan">Rp 0</span></div>
             </div>
           </div>
         </div>
@@ -435,6 +451,8 @@
     { key: "Mozarella Manis", color: "#8A7A3F" },
     { key: "Mozarella Pedas", color: "#7A2E14" },
   ];
+
+  const HARGA_KEBAB = 30000; // berlaku sama untuk semua varian rasa
 
   let belanjaItems = [];   // {id, nama, harga, jumlah}
   let penjualanRows = [];  // {id, orderId, nama, varian, jumlah, tanggal}
@@ -509,14 +527,21 @@
         jumlah: Number(r.Jumlah) || 0,
       }));
 
-      penjualanRows = (data.penjualan || []).map(r => ({
-        id: r.ID,
-        orderId: r.OrderID,
-        nama: r['Nama Pembeli'],
-        varian: r['Varian Rasa'],
-        jumlah: Number(r.Jumlah) || 0,
-        tanggal: r['Tanggal'] || '',
-      }));
+      penjualanRows = (data.penjualan || []).map(r => {
+        const jumlah = Number(r.Jumlah) || 0;
+        const harga = Number(r['Harga Satuan']) || HARGA_KEBAB;
+        const total = Number(r['Total Harga']) || (jumlah * harga);
+        return {
+          id: r.ID,
+          orderId: r.OrderID,
+          nama: r['Nama Pembeli'],
+          varian: r['Varian Rasa'],
+          jumlah: jumlah,
+          harga: harga,
+          total: total,
+          tanggal: r['Tanggal'] || '',
+        };
+      });
 
       VARIAN_LIST.forEach(v => {
         stok[v.key] = (data.stok && Number(data.stok[v.key])) || 0;
@@ -687,6 +712,15 @@
   function updateDraftJumlah(id, value) {
     const d = draftItems.find(d => d.id === id);
     if (d) d.jumlah = value;
+    const subtotalEl = document.getElementById('subtotal-' + id);
+    if (subtotalEl) subtotalEl.textContent = fmtRp((Number(value) || 0) * HARGA_KEBAB);
+    updateTotalPesananDisplay();
+  }
+
+  function updateTotalPesananDisplay() {
+    const total = draftItems.reduce((s, d) => s + (Number(d.jumlah) || 0), 0) * HARGA_KEBAB;
+    const el = document.getElementById('totalPesananValue');
+    if (el) el.textContent = fmtRp(total);
   }
 
   function renderDraftItems() {
@@ -700,9 +734,13 @@
           <input type="number" min="0" placeholder="Jml" value="${d.jumlah}" oninput="updateDraftJumlah('${d.id}', this.value)" />
           <button class="btn btn-ghost" onclick="removeDraftRow('${d.id}')">🗑</button>
         </div>
-        <div class="stok-hint">Stok tersedia: <strong>${stok[d.varian] || 0}</strong></div>
+        <div class="stok-hint">
+          Stok tersedia: <strong>${stok[d.varian] || 0}</strong>
+          &middot; Subtotal: <strong id="subtotal-${d.id}">${fmtRp((Number(d.jumlah) || 0) * HARGA_KEBAB)}</strong>
+        </div>
       </div>
     `).join('');
+    updateTotalPesananDisplay();
   }
 
   async function simpanPesanan() {
@@ -728,7 +766,13 @@
       }
     }
 
-    const items = valid.map(d => ({ nama, varian: d.varian, jumlah: Number(d.jumlah) }));
+    const items = valid.map(d => ({
+      nama,
+      varian: d.varian,
+      jumlah: Number(d.jumlah),
+      harga: HARGA_KEBAB,
+      total: Number(d.jumlah) * HARGA_KEBAB,
+    }));
     const result = await postAction('addPenjualan', { items, tanggal: tanggalTerpilih });
     if (!result.success) {
       alert(result.error || 'Gagal menyimpan pesanan.');
@@ -759,19 +803,22 @@
       return;
     }
 
-    // Sheet 1: Detail Penjualan — tanggal, nama pembeli, varian rasa, jumlah
+    // Sheet 1: Detail Penjualan — tanggal, nama pembeli, varian rasa, jumlah, harga
     const detailData = penjualanRows.map(r => ({
       'Tanggal Penjualan': fmtTanggal(r.tanggal),
       'Nama Pembeli': r.nama,
       'Varian Rasa': r.varian,
       'Jumlah': r.jumlah,
+      'Harga Satuan': r.harga,
+      'Total Harga': r.total,
     }));
 
-    // Sheet 2: Rekap kebab terjual per tanggal, untuk semua varian rasa
+    // Sheet 2: Rekap kebab terjual & pendapatan per tanggal, untuk semua varian rasa
     const semuaTanggal = Array.from(new Set(penjualanRows.map(r => r.tanggal))).sort();
     const rekapData = semuaTanggal.map(tgl => {
       const row = { 'Tanggal': fmtTanggal(tgl) };
       let total = 0;
+      let totalPendapatan = 0;
       VARIAN_LIST.forEach(v => {
         const jumlahVarian = penjualanRows
           .filter(r => r.tanggal === tgl && r.varian === v.key)
@@ -779,17 +826,19 @@
         row[v.key] = jumlahVarian;
         total += jumlahVarian;
       });
+      totalPendapatan = penjualanRows.filter(r => r.tanggal === tgl).reduce((s, r) => s + r.total, 0);
       row['Total Kebab Terjual'] = total;
+      row['Total Pendapatan'] = totalPendapatan;
       return row;
     });
 
     const wb = XLSX.utils.book_new();
     const wsDetail = XLSX.utils.json_to_sheet(detailData);
-    wsDetail['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 18 }, { wch: 10 }];
+    wsDetail['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 18 }, { wch: 10 }, { wch: 14 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsDetail, 'Detail Penjualan');
 
     const wsRekap = XLSX.utils.json_to_sheet(rekapData);
-    wsRekap['!cols'] = [{ wch: 16 }, { wch: 15 }, { wch: 15 }, { wch: 16 }, { wch: 16 }, { wch: 18 }];
+    wsRekap['!cols'] = [{ wch: 16 }, { wch: 15 }, { wch: 15 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, wsRekap, 'Rekap Per Tanggal');
 
     const namaFile = 'Penjualan-Kebab-Bara-' + todayISO() + '.xlsx';
@@ -818,6 +867,7 @@
               </span>
             </td>
             <td class="right num">${r.jumlah}</td>
+            <td class="right num">${fmtRp(r.total)}</td>
             <td class="tgl-cell">${escapeHtml(fmtTanggal(r.tanggal))}</td>
             <td class="center"><button class="btn btn-ghost" onclick="hapusPenjualan('${r.id}')">🗑</button></td>
           </tr>
@@ -830,6 +880,7 @@
               <th>Nama Pembeli</th>
               <th>Varian Rasa</th>
               <th class="right">Jumlah</th>
+              <th class="right">Total</th>
               <th>Tanggal</th>
               <th></th>
             </tr>
@@ -858,7 +909,9 @@
     `).join('');
 
     const totalKebab = rowsTanggalIni.reduce((s, r) => s + r.jumlah, 0);
+    const totalPendapatan = rowsTanggalIni.reduce((s, r) => s + r.total, 0);
     document.getElementById('rTotalKebab').textContent = totalKebab;
+    document.getElementById('rTotalPendapatan').textContent = fmtRp(totalPendapatan);
     document.getElementById('rekapTanggalLabel').textContent = fmtTanggal(tanggalTerpilih);
   }
 
