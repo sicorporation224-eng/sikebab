@@ -248,12 +248,8 @@
   .col-frozen {
     position: sticky;
     top: 112px;
-    max-height: calc(100vh - 130px);
-    overflow-y: auto;
-    scrollbar-width: thin;
+    align-self: start;
   }
-  .col-frozen::-webkit-scrollbar { width: 6px; }
-  .col-frozen::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
   .col-scroll { min-width: 0; }
   .riwayat-card { display: flex; flex-direction: column; }
   .scroll-panel {
