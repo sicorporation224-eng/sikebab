@@ -237,6 +237,13 @@
     white-space: nowrap;
   }
   .stok-edit-row button:hover { opacity: 0.85; }
+  .stok-edit-row .stok-reset-btn {
+    background: rgba(194,65,12,0.18);
+    color: #F3A98C;
+    padding: 6px 10px;
+    flex: 0 0 auto;
+  }
+  .stok-edit-row .stok-reset-btn:hover { background: rgba(194,65,12,0.32); opacity: 1; }
   .receipt-stack { display: flex; flex-direction: column; gap: 18px; }
   .tanggal-picker-row input[type="date"] {
     width: 100%;
@@ -677,6 +684,7 @@
           <div class="stok-edit-row">
             <input type="number" min="0" id="${inputId}" placeholder="Set stok baru" />
             <button onclick="handleUpdateStok('${v.key}')">Update</button>
+            <button class="stok-reset-btn" onclick="handleResetStok('${v.key}')" title="Hapus / reset stok ke 0">🗑</button>
           </div>
         </div>
       `;
@@ -693,6 +701,15 @@
     const result = await postAction('setStok', { varian: varianKey, jumlah: val });
     if (!result.success) { alert(result.error || 'Gagal mengubah stok.'); }
     input.value = '';
+    await loadAllData();
+  }
+
+  async function handleResetStok(varianKey) {
+    const konfirmasi = confirm(`Hapus/reset stok "${varianKey}" ke 0? Gunakan ini kalau salah input stok sebelumnya.`);
+    if (!konfirmasi) return;
+
+    const result = await postAction('setStok', { varian: varianKey, jumlah: 0 });
+    if (!result.success) { alert(result.error || 'Gagal mereset stok.'); }
     await loadAllData();
   }
 
