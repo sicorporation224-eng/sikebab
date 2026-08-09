@@ -836,7 +836,7 @@
     wsRekap['!cols'] = [{ wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, wsRekap, 'Rekap Per Tanggal');
 
-    const namaFile = 'Belanja-Kebab-Bara-' + todayISO() + '.xlsx';
+    const namaFile = 'Belanja-SiKebab-' + todayISO() + '.xlsx';
     XLSX.writeFile(wb, namaFile);
   }
 
@@ -1204,7 +1204,7 @@
     wsRekap['!cols'] = [{ wch: 16 }, { wch: 15 }, { wch: 15 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, wsRekap, 'Rekap Per Tanggal');
 
-    const namaFile = 'Penjualan-Kebab-Bara-' + todayISO() + '.xlsx';
+    const namaFile = 'Penjualan-SiKebab-' + todayISO() + '.xlsx';
     XLSX.writeFile(wb, namaFile);
   }
 
