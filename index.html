@@ -393,14 +393,9 @@
                   <button type="button" onclick="geserTanggalBelanja(1)" aria-label="Tanggal berikutnya">›</button>
                 </span>
               </div>
-              <div id="rekapBelanjaWrap"></div>
-              <div class="receipt-row total"><span>TOTAL TANGGAL INI</span><span id="rTotalBelanjaTanggal">Rp 0</span></div>
-            </div>
-
-            <div class="receipt">
-              <div class="receipt-title">Struk Belanja (Semua Tanggal)</div>
               <div class="receipt-row"><span>Jumlah bahan</span><span id="rBahanCount">0 item</span></div>
               <div class="receipt-row"><span>Total unit dibeli</span><span id="rUnitCount">0</span></div>
+              <div id="rekapBelanjaWrap"></div>
               <div class="receipt-row total"><span>TOTAL BELANJA</span><span id="rGrandTotal">Rp 0</span></div>
             </div>
           </div>
@@ -701,14 +696,15 @@
       `;
     }
 
-    const grandTotal = belanjaItems.reduce((s, it) => s + it.harga * it.jumlah, 0);
-    const unitCount = belanjaItems.reduce((s, it) => s + it.jumlah, 0);
-    document.getElementById('rBahanCount').textContent = belanjaItems.length + ' item';
-    document.getElementById('rUnitCount').textContent = unitCount;
-    document.getElementById('rGrandTotal').textContent = fmtRp(grandTotal);
-
-    // Rekap Belanja — hanya untuk tanggal yang sedang dipilih
+    // Rekap Belanja — semua statistik mengikuti tanggal yang sedang dipilih
     const itemsTanggalIni = belanjaItems.filter(it => it.tanggal === tanggalBelanjaTerpilih);
+    const unitCountTanggal = itemsTanggalIni.reduce((s, it) => s + it.jumlah, 0);
+    const totalBelanjaTanggal = itemsTanggalIni.reduce((s, it) => s + it.harga * it.jumlah, 0);
+
+    document.getElementById('rBahanCount').textContent = itemsTanggalIni.length + ' item';
+    document.getElementById('rUnitCount').textContent = unitCountTanggal;
+    document.getElementById('rGrandTotal').textContent = fmtRp(totalBelanjaTanggal);
+
     const rekapBelanjaWrap = document.getElementById('rekapBelanjaWrap');
     if (itemsTanggalIni.length === 0) {
       rekapBelanjaWrap.innerHTML = '<div class="stok-hint" style="color:#B4A38F; margin:8px 0;">Belum ada belanja di tanggal ini.</div>';
@@ -720,8 +716,6 @@
         </div>
       `).join('');
     }
-    const totalBelanjaTanggal = itemsTanggalIni.reduce((s, it) => s + it.harga * it.jumlah, 0);
-    document.getElementById('rTotalBelanjaTanggal').textContent = fmtRp(totalBelanjaTanggal);
     document.getElementById('rekapBelanjaTanggalLabel').textContent = fmtTanggal(tanggalBelanjaTerpilih);
   }
 
