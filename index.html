@@ -821,12 +821,9 @@
 
   // ---------- Unduh Excel ----------
   // ---------- Cetak Struk ----------
-  function cetakStruk(orderId) {
+  function bangunStrukHtml(orderId, autoPrint) {
     const items = penjualanRows.filter(r => r.orderId === orderId);
-    if (items.length === 0) {
-      alert('Data transaksi tidak ditemukan.');
-      return;
-    }
+    if (items.length === 0) return null;
 
     const nama = items[0].nama;
     const tanggal = items[0].tanggal;
@@ -845,14 +842,14 @@
       </tr>
     `).join('');
 
-    const receiptHtml = `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8" />
 <title>Struk Pembelian - ${escapeHtml(nama)}</title>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: 'Courier New', Courier, monospace; max-width: 320px; margin: 0 auto; padding: 22px 18px; color: #241712; }
+  body { font-family: 'Courier New', Courier, monospace; max-width: 320px; margin: 0 auto; padding: 22px 18px; color: #241712; background: #fff; }
   .center { text-align: center; }
   img.logo { width: 68px; height: 68px; border-radius: 50%; object-fit: cover; margin-bottom: 8px; }
   h1 { font-size: 17px; margin: 4px 0 0; letter-spacing: 0.5px; }
@@ -864,7 +861,15 @@
   .info-row { display: flex; justify-content: space-between; font-size: 12px; margin: 3px 0; }
   .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 14.5px; margin-top: 10px; border-top: 1.5px solid #333; padding-top: 10px; }
   .footer { text-align: center; font-size: 11px; margin-top: 20px; color: #7A6A58; line-height: 1.5; }
+  .no-print { text-align: center; margin-top: 22px; }
+  .no-print button {
+    background: #C2410C; color: #fff; border: none; border-radius: 8px;
+    padding: 10px 20px; font-size: 13px; font-weight: 700; font-family: 'Inter', Arial, sans-serif;
+    cursor: pointer;
+  }
+  .no-print button:hover { opacity: 0.9; }
   @media print {
+    .no-print { display: none; }
     body { padding: 0; max-width: 100%; }
     @page { margin: 10mm; }
   }
@@ -895,20 +900,36 @@
   <div class="info-row"><span>Total Kebab</span><span>${totalJumlah} pcs</span></div>
   <div class="total-row"><span>TOTAL BAYAR</span><span>${fmtRp(totalHarga)}</span></div>
   <div class="footer">Terima kasih banyak sobat si.kebab, semoga suka, berkenan dan sesuai selera ya 💚</div>
+  <div class="no-print"><button onclick="window.print()">🖨 Cetak Struk Ini</button></div>
   <script>
-    window.onload = function () { window.print(); };
+    ${autoPrint ? 'window.onload = function () { window.print(); };' : ''}
   <\/script>
 </body>
 </html>`;
+  }
 
+  function bukaJendelaStruk(orderId, autoPrint) {
+    const html = bangunStrukHtml(orderId, autoPrint);
+    if (html === null) {
+      alert('Data transaksi tidak ditemukan.');
+      return;
+    }
     const jendela = window.open('', '_blank', 'width=380,height=680');
     if (!jendela) {
-      alert('Popup diblokir browser. Izinkan popup untuk mencetak struk, lalu coba lagi.');
+      alert('Popup diblokir browser. Izinkan popup untuk membuka struk, lalu coba lagi.');
       return;
     }
     jendela.document.open();
-    jendela.document.write(receiptHtml);
+    jendela.document.write(html);
     jendela.document.close();
+  }
+
+  function previewStruk(orderId) {
+    bukaJendelaStruk(orderId, false);
+  }
+
+  function cetakStruk(orderId) {
+    bukaJendelaStruk(orderId, true);
   }
 
   function unduhExcel() {
@@ -988,6 +1009,7 @@
             <td class="right num">${fmtRp(r.total)}</td>
             <td class="tgl-cell">${escapeHtml(fmtTanggal(r.tanggal))}</td>
             <td class="center aksi-cell">
+              ${showName ? `<button class="btn btn-ghost" onclick="previewStruk('${r.orderId}')" title="Preview Struk">👁</button>` : ''}
               ${showName ? `<button class="btn btn-ghost" onclick="cetakStruk('${r.orderId}')" title="Cetak Struk">🖨</button>` : ''}
               <button class="btn btn-ghost" onclick="hapusPenjualan('${r.id}')" title="Hapus">🗑</button>
             </td>
