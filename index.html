@@ -861,13 +861,16 @@
   .info-row { display: flex; justify-content: space-between; font-size: 12px; margin: 3px 0; }
   .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 14.5px; margin-top: 10px; border-top: 1.5px solid #333; padding-top: 10px; }
   .footer { text-align: center; font-size: 11px; margin-top: 20px; color: #7A6A58; line-height: 1.5; }
-  .no-print { text-align: center; margin-top: 22px; }
+  #strukCapture { background: #fff; padding-bottom: 4px; }
+  .no-print { text-align: center; margin-top: 22px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
   .no-print button {
     background: #C2410C; color: #fff; border: none; border-radius: 8px;
-    padding: 10px 20px; font-size: 13px; font-weight: 700; font-family: 'Inter', Arial, sans-serif;
+    padding: 10px 18px; font-size: 13px; font-weight: 700; font-family: 'Inter', Arial, sans-serif;
     cursor: pointer;
   }
   .no-print button:hover { opacity: 0.9; }
+  .no-print button.sekunder { background: #3A2A20; }
+  .no-print .status-unduh { width: 100%; text-align: center; font-size: 11px; color: #7A6A58; font-family: 'Inter', Arial, sans-serif; margin-top: 6px; }
   @media print {
     .no-print { display: none; }
     body { padding: 0; max-width: 100%; }
@@ -876,33 +879,67 @@
 </style>
 </head>
 <body>
-  <div class="center">
-    ${logoSrc ? `<img class="logo" src="${logoSrc}" alt="Logo Si.Kebab" />` : ''}
-    <h1>Si.Kebab</h1>
-    <div class="sub">SNACK FROZEN HOMEMADE</div>
+  <div id="strukCapture">
+    <div class="center">
+      ${logoSrc ? `<img class="logo" src="${logoSrc}" alt="Logo Si.Kebab" crossorigin="anonymous" />` : ''}
+      <h1>Si.Kebab</h1>
+      <div class="sub">SNACK FROZEN HOMEMADE</div>
+    </div>
+    <hr />
+    <div class="info-row"><span>Tanggal</span><span>${escapeHtml(fmtTanggal(tanggal))}</span></div>
+    <div class="info-row"><span>Nama Pembeli</span><span><strong>${escapeHtml(nama)}</strong></span></div>
+    <hr />
+    <table>
+      <thead>
+        <tr>
+          <th>Varian Rasa</th>
+          <th style="text-align:center;">Jml</th>
+          <th style="text-align:right;">Harga</th>
+          <th style="text-align:right;">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+    <hr />
+    <div class="info-row"><span>Total Kebab</span><span>${totalJumlah} pcs</span></div>
+    <div class="total-row"><span>TOTAL BAYAR</span><span>${fmtRp(totalHarga)}</span></div>
+    <div class="footer">Terima kasih banyak sobat si.kebab, semoga suka, berkenan dan sesuai selera ya 💚</div>
   </div>
-  <hr />
-  <div class="info-row"><span>Tanggal</span><span>${escapeHtml(fmtTanggal(tanggal))}</span></div>
-  <div class="info-row"><span>Nama Pembeli</span><span><strong>${escapeHtml(nama)}</strong></span></div>
-  <hr />
-  <table>
-    <thead>
-      <tr>
-        <th>Varian Rasa</th>
-        <th style="text-align:center;">Jml</th>
-        <th style="text-align:right;">Harga</th>
-        <th style="text-align:right;">Subtotal</th>
-      </tr>
-    </thead>
-    <tbody>${itemsHtml}</tbody>
-  </table>
-  <hr />
-  <div class="info-row"><span>Total Kebab</span><span>${totalJumlah} pcs</span></div>
-  <div class="total-row"><span>TOTAL BAYAR</span><span>${fmtRp(totalHarga)}</span></div>
-  <div class="footer">Terima kasih banyak sobat si.kebab, semoga suka, berkenan dan sesuai selera ya 💚</div>
-  <div class="no-print"><button onclick="window.print()">🖨 Cetak Struk Ini</button></div>
+  <div class="no-print">
+    <button onclick="window.print()">🖨 Cetak Struk Ini</button>
+    <button class="sekunder" onclick="unduhJPEG(this)">⬇ Unduh JPEG</button>
+    <div class="status-unduh" id="statusUnduh"></div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
   <script>
     ${autoPrint ? 'window.onload = function () { window.print(); };' : ''}
+
+    function unduhJPEG(btn) {
+      var status = document.getElementById('statusUnduh');
+      if (typeof html2canvas === 'undefined') {
+        status.textContent = 'Modul gambar belum termuat, coba lagi sebentar (butuh internet).';
+        return;
+      }
+      btn.disabled = true;
+      status.textContent = 'Menyiapkan gambar...';
+      html2canvas(document.getElementById('strukCapture'), {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true
+      }).then(function (canvas) {
+        var link = document.createElement('a');
+        link.download = 'Struk-SiKebab-${escapeHtml(nama).replace(/[^a-zA-Z0-9]+/g, '-')}-${tanggal || ''}.jpg';
+        link.href = canvas.toDataURL('image/jpeg', 0.95);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        status.textContent = 'Gambar berhasil diunduh.';
+        btn.disabled = false;
+      }).catch(function (err) {
+        status.textContent = 'Gagal membuat gambar. Coba lagi.';
+        btn.disabled = false;
+      });
+    }
   <\/script>
 </body>
 </html>`;
