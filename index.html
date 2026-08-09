@@ -342,7 +342,7 @@
     <!-- TAB: BELANJA -->
     <div class="tab-panel active" id="panelBelanja">
       <div class="grid-2">
-        <div>
+        <div class="col-scroll">
           <div class="card">
             <div class="section-label"><span class="dot"></span>Tambah Bahan</div>
             <div class="belanja-form-grid">
@@ -364,19 +364,47 @@
             </div>
           </div>
 
-          <div class="card">
+          <div class="card riwayat-card">
             <div class="section-label"><span class="dot"></span>Rincian Belanja</div>
-            <div id="belanjaTableWrap">
-              <div class="empty-state">Belum ada bahan yang dicatat.</div>
+            <div class="scroll-panel" id="belanjaScrollPanel">
+              <div id="belanjaTableWrap">
+                <div class="empty-state">Belum ada bahan yang dicatat.</div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="receipt">
-          <div class="receipt-title">Struk Belanja</div>
-          <div class="receipt-row"><span>Jumlah bahan</span><span id="rBahanCount">0 item</span></div>
-          <div class="receipt-row"><span>Total unit dibeli</span><span id="rUnitCount">0</span></div>
-          <div class="receipt-row total"><span>TOTAL BELANJA</span><span id="rGrandTotal">Rp 0</span></div>
+        <div class="col-frozen">
+          <div class="receipt-stack">
+            <div class="receipt">
+              <div class="receipt-title">Tanggal Belanja</div>
+              <div class="tanggal-picker-row">
+                <input type="date" id="inpTanggalBelanja" />
+              </div>
+              <div class="tanggal-hint">Bahan baru & rekap akan tercatat untuk tanggal ini.</div>
+            </div>
+
+            <div class="receipt">
+              <div class="receipt-title">Rekap Belanja</div>
+              <div class="receipt-row">
+                <span>Tanggal</span>
+                <span class="tgl-nav">
+                  <button type="button" onclick="geserTanggalBelanja(-1)" aria-label="Tanggal sebelumnya">‹</button>
+                  <span id="rekapBelanjaTanggalLabel">-</span>
+                  <button type="button" onclick="geserTanggalBelanja(1)" aria-label="Tanggal berikutnya">›</button>
+                </span>
+              </div>
+              <div id="rekapBelanjaWrap"></div>
+              <div class="receipt-row total"><span>TOTAL TANGGAL INI</span><span id="rTotalBelanjaTanggal">Rp 0</span></div>
+            </div>
+
+            <div class="receipt">
+              <div class="receipt-title">Struk Belanja (Semua Tanggal)</div>
+              <div class="receipt-row"><span>Jumlah bahan</span><span id="rBahanCount">0 item</span></div>
+              <div class="receipt-row"><span>Total unit dibeli</span><span id="rUnitCount">0</span></div>
+              <div class="receipt-row total"><span>TOTAL BELANJA</span><span id="rGrandTotal">Rp 0</span></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -483,6 +511,7 @@
     return local.toISOString().slice(0, 10);
   }
   let tanggalTerpilih = todayISO();
+  let tanggalBelanjaTerpilih = todayISO();
 
   function fmtTanggal(iso) {
     if (!iso) return '-';
@@ -504,6 +533,21 @@
     const inpTanggal = document.getElementById('inpTanggalPenjualan');
     if (inpTanggal) inpTanggal.value = tanggalTerpilih;
     renderPenjualan();
+  }
+
+  function geserTanggalBelanja(delta) {
+    const d = new Date(tanggalBelanjaTerpilih + 'T00:00:00');
+    if (isNaN(d.getTime())) { tanggalBelanjaTerpilih = todayISO(); }
+    else {
+      d.setDate(d.getDate() + delta);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      tanggalBelanjaTerpilih = `${yyyy}-${mm}-${dd}`;
+    }
+    const inpTanggal = document.getElementById('inpTanggalBelanja');
+    if (inpTanggal) inpTanggal.value = tanggalBelanjaTerpilih;
+    renderBelanja();
   }
 
   function uid() { return Math.random().toString(36).slice(2, 10); }
@@ -542,6 +586,7 @@
         nama: r['Nama Bahan'],
         harga: Number(r.Harga) || 0,
         jumlah: Number(r.Jumlah) || 0,
+        tanggal: r['Tanggal'] || '',
       }));
 
       penjualanRows = (data.penjualan || []).map(r => {
@@ -610,7 +655,7 @@
     const jumlah = Number(jumlahEl.value);
     if (!nama || !harga || !jumlah) return;
 
-    const result = await postAction('addBelanja', { data: { nama, harga, jumlah } });
+    const result = await postAction('addBelanja', { data: { nama, harga, jumlah, tanggal: tanggalBelanjaTerpilih } });
     if (!result.success) { alert(result.error || 'Gagal menambah bahan.'); setSync('err','Gagal'); return; }
 
     namaEl.value = '';
@@ -636,6 +681,7 @@
           <td class="right num">${fmtRp(it.harga)}</td>
           <td class="right num">${it.jumlah}</td>
           <td class="right num">${fmtRp(it.harga * it.jumlah)}</td>
+          <td class="tgl-cell">${escapeHtml(fmtTanggal(it.tanggal))}</td>
           <td class="center"><button class="btn btn-ghost" onclick="hapusBahan('${it.id}')">🗑</button></td>
         </tr>
       `).join('');
@@ -647,6 +693,7 @@
               <th class="right">Harga</th>
               <th class="right">Jumlah</th>
               <th class="right">Total</th>
+              <th>Tanggal</th>
               <th></th>
             </tr>
           </thead>
@@ -660,6 +707,23 @@
     document.getElementById('rBahanCount').textContent = belanjaItems.length + ' item';
     document.getElementById('rUnitCount').textContent = unitCount;
     document.getElementById('rGrandTotal').textContent = fmtRp(grandTotal);
+
+    // Rekap Belanja — hanya untuk tanggal yang sedang dipilih
+    const itemsTanggalIni = belanjaItems.filter(it => it.tanggal === tanggalBelanjaTerpilih);
+    const rekapBelanjaWrap = document.getElementById('rekapBelanjaWrap');
+    if (itemsTanggalIni.length === 0) {
+      rekapBelanjaWrap.innerHTML = '<div class="stok-hint" style="color:#B4A38F; margin:8px 0;">Belum ada belanja di tanggal ini.</div>';
+    } else {
+      rekapBelanjaWrap.innerHTML = itemsTanggalIni.map(it => `
+        <div class="receipt-row">
+          <span>${escapeHtml(it.nama)} <span style="opacity:0.6;">&times;${it.jumlah}</span></span>
+          <span>${fmtRp(it.harga * it.jumlah)}</span>
+        </div>
+      `).join('');
+    }
+    const totalBelanjaTanggal = itemsTanggalIni.reduce((s, it) => s + it.harga * it.jumlah, 0);
+    document.getElementById('rTotalBelanjaTanggal').textContent = fmtRp(totalBelanjaTanggal);
+    document.getElementById('rekapBelanjaTanggalLabel').textContent = fmtTanggal(tanggalBelanjaTerpilih);
   }
 
   // ---------- Stok ----------
@@ -846,6 +910,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Struk Pembelian - ${escapeHtml(nama)}</title>
 <style>
   * { box-sizing: border-box; }
@@ -926,10 +991,14 @@
       }
       btn.disabled = true;
       status.textContent = 'Menyiapkan gambar...';
-      html2canvas(document.getElementById('strukCapture'), {
+      var strukEl = document.getElementById('strukCapture');
+      html2canvas(strukEl, {
         backgroundColor: '#ffffff',
         scale: 1.5,
-        useCORS: true
+        useCORS: true,
+        windowWidth: 300,
+        width: strukEl.scrollWidth,
+        height: strukEl.scrollHeight
       }).then(function (canvas) {
         var link = document.createElement('a');
         link.download = 'Struk-SiKebab-${escapeHtml(nama).replace(/[^a-zA-Z0-9]+/g, '-')}-${tanggal || ''}.jpg';
@@ -1112,6 +1181,13 @@
   inpTanggal.addEventListener('change', () => {
     tanggalTerpilih = inpTanggal.value || todayISO();
     renderPenjualan();
+  });
+
+  const inpTanggalBlj = document.getElementById('inpTanggalBelanja');
+  inpTanggalBlj.value = tanggalBelanjaTerpilih;
+  inpTanggalBlj.addEventListener('change', () => {
+    tanggalBelanjaTerpilih = inpTanggalBlj.value || todayISO();
+    renderBelanja();
   });
 
   // Enter-to-submit for belanja fields
