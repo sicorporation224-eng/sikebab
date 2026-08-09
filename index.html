@@ -259,6 +259,7 @@
   .tanggal-picker-row input[type="date"]:focus { border-color: var(--mustard); }
   .tanggal-picker-row input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.85); opacity: 0.8; cursor: pointer; }
   .tanggal-hint { font-size: 10.5px; color: #B4A38F; margin-top: 8px; line-height: 1.4; }
+  .tanggal-hint-light { font-size: 11px; color: #7A6A58; margin-top: 8px; line-height: 1.4; }
   .tgl-cell { font-family: 'Space Mono', monospace; font-size: 12px; color: #9A8A76; white-space: nowrap; }
   .belanja-form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; }
   .receipt { background: var(--char); color: var(--cream); border-radius: 12px; padding: 18px 20px; position: relative; font-family: 'Space Mono', monospace; }
@@ -344,6 +345,12 @@
       <div class="grid-2">
         <div class="col-scroll">
           <div class="card">
+            <div class="section-label"><span class="dot"></span>Tanggal Belanja</div>
+            <input type="date" id="inpTanggalBelanja" />
+            <div class="tanggal-hint-light">Bahan baru & rekap akan tercatat untuk tanggal ini.</div>
+          </div>
+
+          <div class="card">
             <div class="section-label"><span class="dot"></span>Tambah Bahan</div>
             <div class="belanja-form-grid">
               <div>
@@ -376,14 +383,6 @@
 
         <div class="col-frozen">
           <div class="receipt-stack">
-            <div class="receipt">
-              <div class="receipt-title">Tanggal Belanja</div>
-              <div class="tanggal-picker-row">
-                <input type="date" id="inpTanggalBelanja" />
-              </div>
-              <div class="tanggal-hint">Bahan baru & rekap akan tercatat untuk tanggal ini.</div>
-            </div>
-
             <div class="receipt">
               <div class="receipt-title">Rekap Belanja</div>
               <div class="receipt-row">
