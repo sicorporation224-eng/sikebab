@@ -131,6 +131,8 @@
   .section-label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
   .section-label-row .section-label { margin-bottom: 0; }
   .btn-sm { padding: 6px 11px; font-size: 12px; }
+  .filter-excel-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .filter-excel-group input[type="date"] { width: auto; padding: 6px 8px; font-size: 12px; }
   .card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 18px; }
   label.f-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #7A6A58; margin-bottom: 4px; display: block; }
   input, select {
@@ -167,6 +169,7 @@
   .btn-outline:hover { border-color: var(--paprika); color: var(--paprika); }
   .btn-ghost { background: transparent; color: #A85A3A; padding: 6px 8px; }
   .aksi-cell { display: flex; gap: 2px; align-items: center; justify-content: center; white-space: nowrap; }
+  .edit-cell-input { padding: 6px 8px !important; font-size: 12.5px !important; min-width: 0; }
   .btn-ghost:hover { color: var(--paprika); }
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   thead th {
@@ -372,7 +375,14 @@
           </div>
 
           <div class="card riwayat-card">
-            <div class="section-label"><span class="dot"></span>Rincian Belanja</div>
+            <div class="section-label-row">
+              <div class="section-label"><span class="dot"></span>Rincian Belanja</div>
+              <div class="filter-excel-group">
+                <input type="date" id="filterTanggalBelanja" title="Filter berdasarkan tanggal" />
+                <button class="btn btn-outline btn-sm" onclick="resetFilterBelanja()" title="Tampilkan semua tanggal">Semua</button>
+                <button class="btn btn-outline btn-sm" onclick="unduhExcelBelanja()">⬇ Unduh Excel</button>
+              </div>
+            </div>
             <div class="scroll-panel" id="belanjaScrollPanel">
               <div id="belanjaTableWrap">
                 <div class="empty-state">Belum ada bahan yang dicatat.</div>
@@ -493,11 +503,14 @@
 
   const HARGA_KEBAB = 30000; // berlaku sama untuk semua varian rasa
 
-  let belanjaItems = [];   // {id, nama, harga, jumlah}
+  let belanjaItems = [];   // {id, nama, harga, jumlah, tanggal}
   let penjualanRows = [];  // {id, orderId, nama, varian, jumlah, tanggal}
   let draftItems = [];     // {id, varian, jumlah}
   let stok = {};           // {varianKey: jumlahStokSaatIni}
   VARIAN_LIST.forEach(v => stok[v.key] = 0);
+
+  let editingBelanjaId = null;   // id bahan yang sedang diedit (null = tidak ada)
+  let filterTanggalBelanja = ''; // '' = tampilkan semua tanggal di Rincian Belanja
 
   function todayISO() {
     const d = new Date();
@@ -666,19 +679,45 @@
 
   function renderBelanja() {
     const wrap = document.getElementById('belanjaTableWrap');
-    if (belanjaItems.length === 0) {
-      wrap.innerHTML = '<div class="empty-state">Belum ada bahan yang dicatat.</div>';
+    const itemsDitampilkan = filterTanggalBelanja
+      ? belanjaItems.filter(it => it.tanggal === filterTanggalBelanja)
+      : belanjaItems;
+
+    if (itemsDitampilkan.length === 0) {
+      wrap.innerHTML = filterTanggalBelanja
+        ? `<div class="empty-state">Tidak ada bahan untuk tanggal ${escapeHtml(fmtTanggal(filterTanggalBelanja))}.</div>`
+        : '<div class="empty-state">Belum ada bahan yang dicatat.</div>';
     } else {
-      let rowsHtml = belanjaItems.map(it => `
-        <tr>
-          <td>${escapeHtml(it.nama)}</td>
-          <td class="right num">${fmtRp(it.harga)}</td>
-          <td class="right num">${it.jumlah}</td>
-          <td class="right num">${fmtRp(it.harga * it.jumlah)}</td>
-          <td class="tgl-cell">${escapeHtml(fmtTanggal(it.tanggal))}</td>
-          <td class="center"><button class="btn btn-ghost" onclick="hapusBahan('${it.id}')">🗑</button></td>
-        </tr>
-      `).join('');
+      let rowsHtml = itemsDitampilkan.map(it => {
+        if (it.id === editingBelanjaId) {
+          return `
+            <tr>
+              <td><input type="text" id="editNama-${it.id}" value="${escapeHtml(it.nama)}" class="edit-cell-input" /></td>
+              <td class="right"><input type="number" min="0" id="editHarga-${it.id}" value="${it.harga}" class="edit-cell-input" style="text-align:right;" /></td>
+              <td class="right"><input type="number" min="0" id="editJumlah-${it.id}" value="${it.jumlah}" class="edit-cell-input" style="text-align:right;" /></td>
+              <td class="right num">${fmtRp(it.harga * it.jumlah)}</td>
+              <td><input type="date" id="editTanggal-${it.id}" value="${it.tanggal || ''}" class="edit-cell-input" /></td>
+              <td class="center aksi-cell">
+                <button class="btn btn-ghost" onclick="simpanEditBahan('${it.id}')" title="Simpan">✅</button>
+                <button class="btn btn-ghost" onclick="batalEditBahan()" title="Batal">✖️</button>
+              </td>
+            </tr>
+          `;
+        }
+        return `
+          <tr>
+            <td>${escapeHtml(it.nama)}</td>
+            <td class="right num">${fmtRp(it.harga)}</td>
+            <td class="right num">${it.jumlah}</td>
+            <td class="right num">${fmtRp(it.harga * it.jumlah)}</td>
+            <td class="tgl-cell">${escapeHtml(fmtTanggal(it.tanggal))}</td>
+            <td class="center aksi-cell">
+              <button class="btn btn-ghost" onclick="mulaiEditBahan('${it.id}')" title="Edit">✏️</button>
+              <button class="btn btn-ghost" onclick="hapusBahan('${it.id}')" title="Hapus">🗑</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
       wrap.innerHTML = `
         <table>
           <thead>
@@ -717,6 +756,88 @@
       `).join('');
     }
     document.getElementById('rekapBelanjaTanggalLabel').textContent = fmtTanggal(tanggalBelanjaTerpilih);
+  }
+
+  function mulaiEditBahan(id) {
+    editingBelanjaId = id;
+    renderBelanja();
+  }
+
+  function batalEditBahan() {
+    editingBelanjaId = null;
+    renderBelanja();
+  }
+
+  async function simpanEditBahan(id) {
+    const namaEl = document.getElementById('editNama-' + id);
+    const hargaEl = document.getElementById('editHarga-' + id);
+    const jumlahEl = document.getElementById('editJumlah-' + id);
+    const tanggalEl = document.getElementById('editTanggal-' + id);
+
+    const nama = namaEl.value.trim();
+    const harga = Number(hargaEl.value);
+    const jumlah = Number(jumlahEl.value);
+    const tanggal = tanggalEl.value;
+
+    if (!nama || !harga || !jumlah) {
+      alert('Nama, harga, dan jumlah tidak boleh kosong.');
+      return;
+    }
+
+    const result = await postAction('updateBelanja', { id, data: { nama, harga, jumlah, tanggal } });
+    if (!result.success) { alert(result.error || 'Gagal menyimpan perubahan.'); }
+
+    editingBelanjaId = null;
+    await loadAllData();
+  }
+
+  function resetFilterBelanja() {
+    filterTanggalBelanja = '';
+    const filterEl = document.getElementById('filterTanggalBelanja');
+    if (filterEl) filterEl.value = '';
+    renderBelanja();
+  }
+
+  function unduhExcelBelanja() {
+    if (typeof XLSX === 'undefined') {
+      alert('Modul Excel belum termuat (butuh koneksi internet). Coba muat ulang halaman.');
+      return;
+    }
+    if (belanjaItems.length === 0) {
+      alert('Belum ada data belanja untuk diunduh.');
+      return;
+    }
+
+    const detailData = belanjaItems.map(it => ({
+      'Tanggal Belanja': fmtTanggal(it.tanggal),
+      'Nama Bahan': it.nama,
+      'Harga': it.harga,
+      'Jumlah': it.jumlah,
+      'Total': it.harga * it.jumlah,
+    }));
+
+    const semuaTanggal = Array.from(new Set(belanjaItems.map(it => it.tanggal))).sort();
+    const rekapData = semuaTanggal.map(tgl => {
+      const itemsTgl = belanjaItems.filter(it => it.tanggal === tgl);
+      return {
+        'Tanggal': fmtTanggal(tgl),
+        'Jumlah Bahan': itemsTgl.length,
+        'Total Unit': itemsTgl.reduce((s, it) => s + it.jumlah, 0),
+        'Total Belanja': itemsTgl.reduce((s, it) => s + it.harga * it.jumlah, 0),
+      };
+    });
+
+    const wb = XLSX.utils.book_new();
+    const wsDetail = XLSX.utils.json_to_sheet(detailData);
+    wsDetail['!cols'] = [{ wch: 16 }, { wch: 24 }, { wch: 14 }, { wch: 10 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wsDetail, 'Detail Belanja');
+
+    const wsRekap = XLSX.utils.json_to_sheet(rekapData);
+    wsRekap['!cols'] = [{ wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, wsRekap, 'Rekap Per Tanggal');
+
+    const namaFile = 'Belanja-Kebab-Bara-' + todayISO() + '.xlsx';
+    XLSX.writeFile(wb, namaFile);
   }
 
   // ---------- Stok ----------
@@ -1182,6 +1303,14 @@
     tanggalBelanjaTerpilih = inpTanggalBlj.value || todayISO();
     renderBelanja();
   });
+
+  const filterBljEl = document.getElementById('filterTanggalBelanja');
+  if (filterBljEl) {
+    filterBljEl.addEventListener('change', () => {
+      filterTanggalBelanja = filterBljEl.value || '';
+      renderBelanja();
+    });
+  }
 
   // Enter-to-submit for belanja fields
   ['inpNamaBahan','inpHarga','inpJumlahBahan'].forEach(id => {
