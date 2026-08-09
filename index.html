@@ -849,18 +849,22 @@
 <title>Struk Pembelian - ${escapeHtml(nama)}</title>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: 'Courier New', Courier, monospace; max-width: 320px; margin: 0 auto; padding: 22px 18px; color: #241712; background: #fff; }
+  body { font-family: 'Courier New', Courier, monospace; max-width: 300px; margin: 0 auto; padding: 20px 16px; color: #241712; background: #fff; font-size: 12px; }
   .center { text-align: center; }
-  img.logo { width: 68px; height: 68px; border-radius: 50%; object-fit: cover; margin-bottom: 8px; }
-  h1 { font-size: 17px; margin: 4px 0 0; letter-spacing: 0.5px; }
-  .sub { font-size: 10.5px; color: #7A6A58; margin-bottom: 4px; letter-spacing: 0.5px; }
+  img.logo { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-bottom: 6px; }
+  h1 { font-size: 15px; margin: 4px 0 0; letter-spacing: 0.5px; }
+  .sub { font-size: 9.5px; color: #7A6A58; margin-bottom: 4px; letter-spacing: 0.5px; }
   hr { border: none; border-top: 1px dashed #B8A98F; margin: 12px 0; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; }
-  th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 1px solid #333; padding-bottom: 5px; color: #555; }
-  td { padding: 5px 0; vertical-align: top; }
-  .info-row { display: flex; justify-content: space-between; font-size: 12px; margin: 3px 0; }
-  .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 14.5px; margin-top: 10px; border-top: 1.5px solid #333; padding-top: 10px; }
-  .footer { text-align: center; font-size: 11px; margin-top: 20px; color: #7A6A58; line-height: 1.5; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10.5px; margin: 10px 0; }
+  th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 1px solid #333; padding: 0 4px 6px 0; color: #555; }
+  td { padding: 6px 4px 6px 0; vertical-align: top; word-wrap: break-word; }
+  th:nth-child(1), td:nth-child(1) { width: 36%; }
+  th:nth-child(2), td:nth-child(2) { width: 13%; text-align: center; }
+  th:nth-child(3), td:nth-child(3) { width: 25%; text-align: right; }
+  th:nth-child(4), td:nth-child(4) { width: 26%; text-align: right; padding-right: 0; }
+  .info-row { display: flex; justify-content: space-between; font-size: 11px; margin: 4px 0; gap: 10px; }
+  .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-top: 10px; border-top: 1.5px solid #333; padding-top: 10px; gap: 10px; }
+  .footer { text-align: center; font-size: 10px; margin-top: 18px; color: #7A6A58; line-height: 1.6; }
   #strukCapture { background: #fff; padding-bottom: 4px; }
   .no-print { text-align: center; margin-top: 22px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
   .no-print button {
@@ -924,7 +928,7 @@
       status.textContent = 'Menyiapkan gambar...';
       html2canvas(document.getElementById('strukCapture'), {
         backgroundColor: '#ffffff',
-        scale: 2,
+        scale: 1.5,
         useCORS: true
       }).then(function (canvas) {
         var link = document.createElement('a');
