@@ -477,6 +477,8 @@
               <div id="rekapVarianWrap"></div>
               <div class="receipt-row total"><span>TOTAL KEBAB TERJUAL</span><span id="rTotalKebab">0</span></div>
               <div class="receipt-row total"><span>TOTAL PENDAPATAN</span><span id="rTotalPendapatan">Rp 0</span></div>
+              <hr style="border:none; border-top:1px dashed rgba(255,255,255,0.15); margin:12px 0;" />
+              <div class="receipt-row"><span>Pendapatan Semua Tanggal</span><span id="rTotalPendapatanSemua">Rp 0</span></div>
             </div>
           </div>
         </div>
@@ -1277,8 +1279,10 @@
 
     const totalKebab = rowsTanggalIni.reduce((s, r) => s + r.jumlah, 0);
     const totalPendapatan = rowsTanggalIni.reduce((s, r) => s + r.total, 0);
+    const totalPendapatanSemua = penjualanRows.reduce((s, r) => s + r.total, 0);
     document.getElementById('rTotalKebab').textContent = totalKebab;
     document.getElementById('rTotalPendapatan').textContent = fmtRp(totalPendapatan);
+    document.getElementById('rTotalPendapatanSemua').textContent = fmtRp(totalPendapatanSemua);
     document.getElementById('rekapTanggalLabel').textContent = fmtTanggal(tanggalTerpilih);
   }
 
