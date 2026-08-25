@@ -58,16 +58,42 @@
     background: #fff;
     box-shadow: 0 0 0 3px rgba(217,162,43,0.35);
     flex-shrink: 0;
+    animation: logoWiggle 3.2s ease-in-out infinite;
+    transform-origin: center;
   }
-  .brand-dot { color: var(--paprika); }
+  @keyframes logoWiggle {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    20% { transform: rotate(-8deg) scale(1.05); }
+    50% { transform: rotate(0deg) scale(1); }
+    75% { transform: rotate(8deg) scale(1.05); }
+  }
   .brand-title {
     font-family: 'Anton', sans-serif;
     font-size: 28px;
     letter-spacing: 0.5px;
     text-transform: none;
-    color: var(--mustard);
     line-height: 1;
+    background: linear-gradient(90deg, var(--mustard) 0%, #FFE9B8 45%, var(--mustard) 90%);
+    background-size: 220% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--mustard);
+    animation: titleShine 3.5s linear infinite, titleBounce 2.4s ease-in-out infinite;
+    display: inline-block;
   }
+  @keyframes titleShine {
+    0% { background-position: 0% center; }
+    100% { background-position: -220% center; }
+  }
+  @keyframes titleBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .brand-logo, .brand-title { animation: none; }
+  }
+  .brand-dot { color: var(--paprika); }
   .brand-sub {
     font-family: 'Space Mono', monospace;
     font-size: 11px;
