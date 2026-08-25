@@ -631,6 +631,12 @@
         stok[v.key] = (data.stok && Number(data.stok[v.key])) || 0;
       });
 
+      if (data.pengaturan && Number(data.pengaturan.hargaKebab) > 0) {
+        HARGA_KEBAB = Number(data.pengaturan.hargaKebab);
+      }
+      const hargaLabelEl = document.getElementById('hargaKebabLabel');
+      if (hargaLabelEl) hargaLabelEl.textContent = fmtRp(HARGA_KEBAB);
+
       renderBelanja();
       renderStok();
       renderPenjualan();
@@ -882,6 +888,37 @@
         </div>
       `;
     }).join('');
+  }
+
+  // ---------- Harga Kebab (bisa diubah admin, mis. untuk promo) ----------
+  function toggleEditHarga() {
+    const row = document.getElementById('hargaEditRow');
+    const btn = document.getElementById('btnUbahHarga');
+    const isHidden = row.style.display === 'none';
+    row.style.display = isHidden ? 'flex' : 'none';
+    btn.style.display = isHidden ? 'none' : 'inline-flex';
+    if (isHidden) {
+      const inp = document.getElementById('inpHargaBaru');
+      inp.value = HARGA_KEBAB;
+      inp.focus();
+    }
+  }
+
+  async function simpanHargaKebab() {
+    const inp = document.getElementById('inpHargaBaru');
+    const val = Number(inp.value);
+    if (!val || val <= 0) {
+      alert('Masukkan harga yang valid (lebih dari 0).');
+      return;
+    }
+    const result = await postAction('setHarga', { harga: val });
+    if (!result.success) {
+      alert(result.error || 'Gagal menyimpan harga baru.');
+      return;
+    }
+    HARGA_KEBAB = val;
+    toggleEditHarga();
+    await loadAllData();
   }
 
   async function handleUpdateStok(varianKey) {
