@@ -233,6 +233,14 @@
   .harga-note-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .harga-edit-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
   .harga-edit-row input { flex: 1; min-width: 140px; padding: 7px 9px; font-size: 12.5px; }
+  .ongkir-row { margin: 6px 0 10px; }
+  .ongkir-input-wrap { display: flex; align-items: center; gap: 8px; }
+  .ongkir-prefix {
+    font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700;
+    color: var(--olive); background: #EEF1E6; border: 1.5px solid var(--line);
+    border-radius: 8px; padding: 9px 11px;
+  }
+  .ongkir-input-wrap input { flex: 1; }
   .total-pesanan-row {
     display: flex; justify-content: space-between; align-items: center;
     margin-top: 4px; padding: 10px 12px;
@@ -475,6 +483,15 @@
             </div>
             <label class="f-label">Varian &amp; Jumlah</label>
             <div id="draftItemsWrap"></div>
+
+            <div class="ongkir-row">
+              <label class="f-label" for="inpOngkir">Ongkir (Opsional, jika diantar)</label>
+              <div class="ongkir-input-wrap">
+                <span class="ongkir-prefix">Rp</span>
+                <input type="number" min="0" id="inpOngkir" placeholder="0" oninput="updateTotalPesananDisplay()" />
+              </div>
+            </div>
+
             <div class="total-pesanan-row">
               <span>Total Pesanan</span>
               <span id="totalPesananValue">Rp 0</span>
@@ -1020,9 +1037,11 @@
   }
 
   function updateTotalPesananDisplay() {
-    const total = draftItems.reduce((s, d) => s + (Number(d.jumlah) || 0), 0) * HARGA_KEBAB;
+    const subtotalKebab = draftItems.reduce((s, d) => s + (Number(d.jumlah) || 0), 0) * HARGA_KEBAB;
+    const ongkirEl = document.getElementById('inpOngkir');
+    const ongkir = ongkirEl ? (Number(ongkirEl.value) || 0) : 0;
     const el = document.getElementById('totalPesananValue');
-    if (el) el.textContent = fmtRp(total);
+    if (el) el.textContent = fmtRp(subtotalKebab + ongkir);
   }
 
   function renderDraftItems() {
@@ -1075,6 +1094,19 @@
       harga: HARGA_KEBAB,
       total: Number(d.jumlah) * HARGA_KEBAB,
     }));
+
+    const ongkirEl = document.getElementById('inpOngkir');
+    const ongkir = ongkirEl ? (Number(ongkirEl.value) || 0) : 0;
+    if (ongkir > 0) {
+      items.push({
+        nama,
+        varian: 'Ongkir',
+        jumlah: 1,
+        harga: ongkir,
+        total: ongkir,
+      });
+    }
+
     const result = await postAction('addPenjualan', { items, tanggal: tanggalTerpilih });
     if (!result.success) {
       alert(result.error || 'Gagal menyimpan pesanan.');
@@ -1083,6 +1115,7 @@
     }
 
     namaInput.value = '';
+    if (ongkirEl) ongkirEl.value = '';
     draftItems = [newDraftRow()];
     renderDraftItems();
     await loadAllData();
@@ -1103,14 +1136,14 @@
     const nama = items[0].nama;
     const tanggal = items[0].tanggal;
     const totalHarga = items.reduce((s, r) => s + r.total, 0);
-    const totalJumlah = items.reduce((s, r) => s + r.jumlah, 0);
+    const totalJumlah = items.filter(r => r.varian !== 'Ongkir').reduce((s, r) => s + r.jumlah, 0);
 
     const logoEl = document.querySelector('.brand-logo');
     const logoSrc = logoEl ? logoEl.src : '';
 
     const itemsHtml = items.map(r => `
       <tr>
-        <td>${escapeHtml(r.varian)}</td>
+        <td>${escapeHtml(r.varian === 'Ongkir' ? '🚚 Ongkir (Antar)' : r.varian)}</td>
         <td style="text-align:center;">${r.jumlah}</td>
         <td style="text-align:right;">${fmtRp(r.harga)}</td>
         <td style="text-align:right;">${fmtRp(r.total)}</td>
@@ -1286,8 +1319,12 @@
         row[v.key] = jumlahVarian;
         total += jumlahVarian;
       });
+      const totalOngkir = penjualanRows
+        .filter(r => r.tanggal === tgl && r.varian === 'Ongkir')
+        .reduce((s, r) => s + r.total, 0);
       totalPendapatan = penjualanRows.filter(r => r.tanggal === tgl).reduce((s, r) => s + r.total, 0);
       row['Total Kebab Terjual'] = total;
+      row['Ongkir'] = totalOngkir;
       row['Total Pendapatan'] = totalPendapatan;
       return row;
     });
@@ -1298,7 +1335,7 @@
     XLSX.utils.book_append_sheet(wb, wsDetail, 'Detail Penjualan');
 
     const wsRekap = XLSX.utils.json_to_sheet(rekapData);
-    wsRekap['!cols'] = [{ wch: 16 }, { wch: 15 }, { wch: 15 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 16 }];
+    wsRekap['!cols'] = [{ wch: 16 }, { wch: 15 }, { wch: 15 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 14 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, wsRekap, 'Rekap Per Tanggal');
 
     const namaFile = 'Penjualan-SiKebab-' + todayISO() + '.xlsx';
@@ -1314,6 +1351,7 @@
       let rowsHtml = penjualanRows.map(r => {
         const showName = r.orderId !== lastOrder;
         lastOrder = r.orderId;
+        const isOngkir = r.varian === 'Ongkir';
         const v = VARIAN_LIST.find(x => x.key === r.varian);
         return `
           <tr>
@@ -1322,8 +1360,9 @@
             </td>
             <td>
               <span class="varian-chip">
-                <span class="varian-dot" style="background:${v ? v.color : '#999'};"></span>
-                ${r.varian}
+                ${isOngkir
+                  ? `<span>🚚</span> Ongkir (Antar)`
+                  : `<span class="varian-dot" style="background:${v ? v.color : '#999'};"></span> ${r.varian}`}
               </span>
             </td>
             <td class="right num">${r.jumlah}</td>
@@ -1372,7 +1411,7 @@
       </div>
     `).join('');
 
-    const totalKebab = rowsTanggalIni.reduce((s, r) => s + r.jumlah, 0);
+    const totalKebab = rowsTanggalIni.filter(r => r.varian !== 'Ongkir').reduce((s, r) => s + r.jumlah, 0);
     const totalPendapatan = rowsTanggalIni.reduce((s, r) => s + r.total, 0);
     const totalPendapatanSemua = penjualanRows.reduce((s, r) => s + r.total, 0);
     document.getElementById('rTotalKebab').textContent = totalKebab;
