@@ -624,7 +624,16 @@
           harga: harga,
           total: total,
           tanggal: r['Tanggal'] || '',
+          waktu: r['Waktu'] || '',
         };
+      });
+
+      // Urutkan supaya pembeli terbaru muncul paling atas.
+      // Stable sort berdasarkan waktu transaksi (item dalam order yang sama tetap berdekatan).
+      penjualanRows.sort((a, b) => {
+        const waktuA = new Date(String(a.waktu).replace(' ', 'T')).getTime() || 0;
+        const waktuB = new Date(String(b.waktu).replace(' ', 'T')).getTime() || 0;
+        return waktuB - waktuA;
       });
 
       VARIAN_LIST.forEach(v => {
