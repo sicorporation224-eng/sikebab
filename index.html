@@ -197,6 +197,9 @@
   .stok-hint strong { color: var(--char-2); }
   .harga-note { font-size: 11.5px; color: #8A7A66; margin: -6px 0 14px; padding: 8px 10px; background: #FBF3E7; border: 1px dashed var(--line); border-radius: 8px; }
   .harga-note strong { color: var(--paprika); }
+  .harga-note-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .harga-edit-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .harga-edit-row input { flex: 1; min-width: 140px; padding: 7px 9px; font-size: 12.5px; }
   .total-pesanan-row {
     display: flex; justify-content: space-between; align-items: center;
     margin-top: 4px; padding: 10px 12px;
@@ -423,7 +426,17 @@
               <label class="f-label">Nama Pembeli</label>
               <input type="text" id="inpNamaPembeli" placeholder="cth. Andi" />
             </div>
-            <div class="harga-note">Harga kebab: <strong>Rp 30.000</strong> / pcs &middot; berlaku untuk semua varian rasa</div>
+            <div class="harga-note">
+              <div class="harga-note-row">
+                <span>Harga kebab: <strong id="hargaKebabLabel">Rp 30.000</strong> / pcs &middot; berlaku untuk semua varian rasa</span>
+                <button class="btn btn-outline btn-sm" onclick="toggleEditHarga()" id="btnUbahHarga">Ubah Harga</button>
+              </div>
+              <div class="harga-edit-row" id="hargaEditRow" style="display:none;">
+                <input type="number" min="0" id="inpHargaBaru" placeholder="Harga baru, mis. 25000 (promo)" />
+                <button class="btn btn-primary btn-sm" onclick="simpanHargaKebab()">Simpan</button>
+                <button class="btn btn-outline btn-sm" onclick="toggleEditHarga()">Batal</button>
+              </div>
+            </div>
             <label class="f-label">Varian &amp; Jumlah</label>
             <div id="draftItemsWrap"></div>
             <div class="total-pesanan-row">
@@ -503,7 +516,7 @@
     { key: "Mozarella Pedas", color: "#7A2E14" },
   ];
 
-  const HARGA_KEBAB = 30000; // berlaku sama untuk semua varian rasa
+  let HARGA_KEBAB = 30000; // berlaku sama untuk semua varian rasa, bisa diubah admin (mis. saat promo)
 
   let belanjaItems = [];   // {id, nama, harga, jumlah, tanggal}
   let penjualanRows = [];  // {id, orderId, nama, varian, jumlah, tanggal}
