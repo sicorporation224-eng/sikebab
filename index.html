@@ -32,6 +32,13 @@
     border-radius: 14px;
     overflow: hidden;
     box-shadow: 0 4px 18px rgba(36,23,18,0.15);
+    transition: max-width 0.2s ease;
+  }
+  @media (min-width: 1024px) {
+    .app-root { max-width: 1240px; }
+  }
+  @media (min-width: 1400px) {
+    .app-root { max-width: 1380px; }
   }
   .header {
     background: var(--char);
@@ -329,6 +336,9 @@
   .tgl-nav button:hover { background: rgba(217,162,43,0.25); }
   .tgl-nav button:active { transform: scale(0.92); }
   .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 26px; align-items: start; }
+  @media (min-width: 1024px) {
+    .grid-2 { grid-template-columns: 1.5fr minmax(340px, 420px); }
+  }
   .col-frozen {
     position: sticky;
     top: 112px;
