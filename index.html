@@ -470,17 +470,7 @@
               <label class="f-label">Nama Pembeli</label>
               <input type="text" id="inpNamaPembeli" placeholder="cth. Andi" />
             </div>
-            <div class="harga-note">
-              <div class="harga-note-row">
-                <span>Harga kebab: <strong id="hargaKebabLabel">Rp 30.000</strong> / pcs &middot; berlaku untuk semua varian rasa</span>
-                <button class="btn btn-outline btn-sm" onclick="toggleEditHarga()" id="btnUbahHarga">Ubah Harga</button>
-              </div>
-              <div class="harga-edit-row" id="hargaEditRow" style="display:none;">
-                <input type="number" min="0" id="inpHargaBaru" placeholder="Harga baru, mis. 25000 (promo)" />
-                <button class="btn btn-primary btn-sm" onclick="simpanHargaKebab()">Simpan</button>
-                <button class="btn btn-outline btn-sm" onclick="toggleEditHarga()">Batal</button>
-              </div>
-            </div>
+            <div class="harga-note">Harga tiap varian rasa bisa berbeda &middot; atur di kartu <strong>"Harga per Varian"</strong> pada panel kanan →</div>
             <label class="f-label">Varian &amp; Jumlah</label>
             <div id="draftItemsWrap"></div>
 
@@ -531,6 +521,11 @@
             </div>
 
             <div class="receipt">
+              <div class="receipt-title">Harga per Varian</div>
+              <div id="hargaVarianWrap"></div>
+            </div>
+
+            <div class="receipt">
               <div class="receipt-title">Rekap Penjualan</div>
               <div class="receipt-row">
                 <span>Tanggal</span>
@@ -571,7 +566,9 @@
     { key: "Sosis Solo", color: "#B5502E" },
   ];
 
-  let HARGA_KEBAB = 30000; // berlaku sama untuk semua varian rasa, bisa diubah admin (mis. saat promo)
+  let hargaVarian = {}; // {varianKey: harga} — bisa berbeda tiap varian, diatur admin
+  VARIAN_LIST.forEach(v => hargaVarian[v.key] = 30000);
+  function getHargaVarian(varianKey) { return hargaVarian[varianKey] || 30000; }
 
   let belanjaItems = [];   // {id, nama, harga, jumlah, tanggal}
   let penjualanRows = [];  // {id, orderId, nama, varian, jumlah, tanggal}
@@ -668,7 +665,7 @@
 
       penjualanRows = (data.penjualan || []).map(r => {
         const jumlah = Number(r.Jumlah) || 0;
-        const harga = Number(r['Harga Satuan']) || HARGA_KEBAB;
+        const harga = Number(r['Harga Satuan']) || 30000;
         const total = Number(r['Total Harga']) || (jumlah * harga);
         return {
           id: r.ID,
@@ -695,14 +692,19 @@
         stok[v.key] = (data.stok && Number(data.stok[v.key])) || 0;
       });
 
-      if (data.pengaturan && Number(data.pengaturan.hargaKebab) > 0) {
-        HARGA_KEBAB = Number(data.pengaturan.hargaKebab);
-      }
-      const hargaLabelEl = document.getElementById('hargaKebabLabel');
-      if (hargaLabelEl) hargaLabelEl.textContent = fmtRp(HARGA_KEBAB);
+      // Fallback lama (satu harga global) jaga-jaga kalau backend belum di-redeploy
+      const fallbackHarga = (data.pengaturan && Number(data.pengaturan.hargaKebab) > 0)
+        ? Number(data.pengaturan.hargaKebab)
+        : 30000;
+      VARIAN_LIST.forEach(v => {
+        hargaVarian[v.key] = (data.hargaVarian && Number(data.hargaVarian[v.key]) > 0)
+          ? Number(data.hargaVarian[v.key])
+          : fallbackHarga;
+      });
 
       renderBelanja();
       renderStok();
+      renderHargaVarian();
       renderPenjualan();
       renderDraftItems();
       setSync('ok', 'Tersimpan di Sheet');
@@ -955,33 +957,43 @@
   }
 
   // ---------- Harga Kebab (bisa diubah admin, mis. untuk promo) ----------
-  function toggleEditHarga() {
-    const row = document.getElementById('hargaEditRow');
-    const btn = document.getElementById('btnUbahHarga');
-    const isHidden = row.style.display === 'none';
-    row.style.display = isHidden ? 'flex' : 'none';
-    btn.style.display = isHidden ? 'none' : 'inline-flex';
-    if (isHidden) {
-      const inp = document.getElementById('inpHargaBaru');
-      inp.value = HARGA_KEBAB;
-      inp.focus();
-    }
+  // ---------- Harga per Varian (bisa berbeda tiap varian, diatur admin) ----------
+  function renderHargaVarian() {
+    const wrap = document.getElementById('hargaVarianWrap');
+    if (!wrap) return;
+    wrap.innerHTML = VARIAN_LIST.map(v => {
+      const harga = getHargaVarian(v.key);
+      const inputId = 'hargaInput-' + v.key.replace(/\s+/g, '');
+      return `
+        <div class="stok-block">
+          <div class="stok-line-top">
+            <span class="stok-varian-label">
+              <span class="varian-dot" style="background:${v.color};"></span>
+              ${v.key}
+            </span>
+            <span class="stok-count-num">${fmtRp(harga)}</span>
+          </div>
+          <div class="stok-edit-row">
+            <input type="number" min="0" id="${inputId}" placeholder="Set harga baru" />
+            <button onclick="handleUpdateHargaVarian('${v.key}')">Update</button>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
-  async function simpanHargaKebab() {
-    const inp = document.getElementById('inpHargaBaru');
-    const val = Number(inp.value);
-    if (!val || val <= 0) {
+  async function handleUpdateHargaVarian(varianKey) {
+    const inputId = 'hargaInput-' + varianKey.replace(/\s+/g, '');
+    const input = document.getElementById(inputId);
+    if (input.value === '') return;
+    const val = Number(input.value);
+    if (isNaN(val) || val <= 0) {
       alert('Masukkan harga yang valid (lebih dari 0).');
       return;
     }
-    const result = await postAction('setHarga', { harga: val });
-    if (!result.success) {
-      alert(result.error || 'Gagal menyimpan harga baru.');
-      return;
-    }
-    HARGA_KEBAB = val;
-    toggleEditHarga();
+    const result = await postAction('setHargaVarian', { varian: varianKey, harga: val });
+    if (!result.success) { alert(result.error || 'Gagal menyimpan harga baru.'); }
+    input.value = '';
     await loadAllData();
   }
 
@@ -1034,12 +1046,12 @@
     const d = draftItems.find(d => d.id === id);
     if (d) d.jumlah = value;
     const subtotalEl = document.getElementById('subtotal-' + id);
-    if (subtotalEl) subtotalEl.textContent = fmtRp((Number(value) || 0) * HARGA_KEBAB);
+    if (subtotalEl && d) subtotalEl.textContent = fmtRp((Number(value) || 0) * getHargaVarian(d.varian));
     updateTotalPesananDisplay();
   }
 
   function updateTotalPesananDisplay() {
-    const subtotalKebab = draftItems.reduce((s, d) => s + (Number(d.jumlah) || 0), 0) * HARGA_KEBAB;
+    const subtotalKebab = draftItems.reduce((s, d) => s + (Number(d.jumlah) || 0) * getHargaVarian(d.varian), 0);
     const ongkirEl = document.getElementById('inpOngkir');
     const ongkir = ongkirEl ? (Number(ongkirEl.value) || 0) : 0;
     const el = document.getElementById('totalPesananValue');
@@ -1059,7 +1071,8 @@
         </div>
         <div class="stok-hint">
           Stok tersedia: <strong>${stok[d.varian] || 0}</strong>
-          &middot; Subtotal: <strong id="subtotal-${d.id}">${fmtRp((Number(d.jumlah) || 0) * HARGA_KEBAB)}</strong>
+          &middot; Harga: <strong>${fmtRp(getHargaVarian(d.varian))}</strong>
+          &middot; Subtotal: <strong id="subtotal-${d.id}">${fmtRp((Number(d.jumlah) || 0) * getHargaVarian(d.varian))}</strong>
         </div>
       </div>
     `).join('');
@@ -1093,8 +1106,8 @@
       nama,
       varian: d.varian,
       jumlah: Number(d.jumlah),
-      harga: HARGA_KEBAB,
-      total: Number(d.jumlah) * HARGA_KEBAB,
+      harga: getHargaVarian(d.varian),
+      total: Number(d.jumlah) * getHargaVarian(d.varian),
     }));
 
     const ongkirEl = document.getElementById('inpOngkir');
@@ -1425,6 +1438,7 @@
   // ---------- Init ----------
   draftItems = [newDraftRow()];
   renderStok();
+  renderHargaVarian();
   renderDraftItems();
   renderBelanja();
   renderPenjualan();
